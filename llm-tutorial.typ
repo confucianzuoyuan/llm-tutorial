@@ -778,6 +778,26 @@ $
   caption: [用于解决手写数字分类的神经网络结构，其中蓝色部分为需要学习的参数],
 )
 
+网络对应的函数表达式如下所示：
+
+$
+  \
+  \
+  \
+  \
+  markhl("output", tag: #<output>) = "softmax"(markhl(upright(bold(w))_2, tag: #<w2>, color: #red) dot.c "ReLU"(markhl(upright(bold(w))_1, tag: #<w1>, color: #blue) dot.c markhl(upright(bold(x)), tag: #<x>, color: #green) + markhl(upright(bold(b))_1, tag: #<b1>, color: #blue)) + markhl(upright(bold(b))_2, tag: #<b2>, color: #red))
+  \
+  \
+  \
+  \
+  #annot(<output>, $10 times 1$, leader-connect: "elbow", pos: top + left, dx: 1em, dy: -1em)
+  #annot(<w2>, $10 times 10$, leader-connect: "elbow", pos: top + left, dx: -1em, dy: -1em)
+  #annot(<w1>, $10 times 784$, leader-connect: "elbow", pos: bottom + left, dx: -1em, dy: 1em)
+  #annot(<x>, $784 times 1$, leader-connect: "elbow", pos: top + left, dx: -1em, dy: -1em)
+  #annot(<b1>, $10 times 1$, leader-connect: "elbow", pos: bottom + left, dx: -1em, dy: 1em)
+  #annot(<b2>, $10 times 1$, leader-connect: "elbow", pos: top + left, dx: -1em, dy: -1em)
+$
+
 在上面的网络中，我们的输入数据是一张784像素点的图片数据
 
 $
@@ -793,29 +813,206 @@ $
 而参数$w_1, b_1, w_2, b_2$是需要*学习*的参数，也就是说在训练过程中不断的改变的参数。我们希望在训练完成以后，给神经网络这个函数输入一张图片数据，能够得到它的分类的概率。其中概率最大的分类，是这张图片的正确分类。
 
 $
-  upright(bold(w))_1 = mat(w_(0,0)^1, w_(0,1)^1, dots.c, w_(0,783)^1; w_(1,0)^1, w_(1,1)^1, dots.c, w_(1,783)^1; dots.v, dots.v, dots.down, dots.v; w_(9,0)^1, w_(9,1)^1, dots.c, w_(9,783)^1) space space space colblue("（上标1表示都是"upright(bold(w))_1"的参数）")
+  upright(bold(w))_1 = colblue(mat(w_(0,0), w_(0,1), dots.c, w_(0,783); w_(1,0), w_(1,1), dots.c, w_(1,783); dots.v, dots.v, dots.down, dots.v; w_(9,0), w_(9,1), dots.c, w_(9,783)))
 $
 
 $
-  upright(bold(b))_1 = mat(b_0^1; b_1^1; b_2^1; dots.v; b_9^1) space space space colblue("（上标1表示都是"upright(bold(b))_1"的参数）")
+  upright(bold(b))_1 = colblue(mat(b_0; b_1; b_2; dots.v; b_9))
 $
 
 $
-  upright(bold(w))_2 = mat(w_(0,0)^2, w_(0,1)^2, dots.c, w_(0,9)^2; w_(1,0)^2, w_(1,1)^2, dots.c, w_(1,9)^2; dots.v, dots.v, dots.down, dots.v; w_(9,0)^2, w_(9,1)^2, dots.c, w_(9,9)^2) space space space colblue("（上标2表示都是"upright(bold(w))_2"的参数）")
+  upright(bold(w))_2 = colred(mat(w_(0,0), w_(0,1), dots.c, w_(0,9); w_(1,0), w_(1,1), dots.c, w_(1,9); dots.v, dots.v, dots.down, dots.v; w_(9,0), w_(9,1), dots.c, w_(9,9)))
 $
 
 $
-  upright(bold(b))_1 = mat(b_0^2; b_1^2; b_2^2; dots.v; b_9^2) space space space colblue("（上标2表示都是"upright(bold(b))_2"的参数）")
+  upright(bold(b))_2 = colred(mat(b_0; b_1; b_2; dots.v; b_9))
 $
 
 其中计算的中间值有
 
 $
-  upright(bold(z))_1 = mat(z_0^1; z_1^1; dots.v; z_9^1) = mat(w_(0,0)^1 dot.c x_0 + w_(0,1)^1 dot.c x_1 + dots.c + w_(0,783)^1 dot.c x_783 + b_0^1; w_(1,0)^1 dot.c x_0 + w_(1,1)^1 dot.c x_1 + dots.c + w_(1,783)^1 dot.c x_783 + b_1^1; dots.v; w_(9,0)^1 dot.c x_0 + w_(9,1)^1 dot.c x_1 + dots.c + w_(9,783)^1 dot.c x_783 + b_9^1;)
+  upright(bold(z))_1 = colblue(mat(z_0; z_1; dots.v; z_9)) = mat(colblue(w_(0,0)) dot.c x_0 + colblue(w_(0,1)) dot.c x_1 + dots.c + colblue(w_(0,783)) dot.c x_783 + colblue(b_0); colblue(w_(1,0)) dot.c x_0 + colblue(w_(1,1)) dot.c x_1 + dots.c + colblue(w_(1,783)) dot.c x_783 + colblue(b_1); dots.v; colblue(w_(9,0)) dot.c x_0 + colblue(w_(9,1)) dot.c x_1 + dots.c + colblue(w_(9,783)) dot.c x_783 + colblue(b_9);)
 $
 
 $
-  upright(bold(a))_1 = mat(a_0^1; a_1^1; dots.v; a_9^1) = mat(max(z_0^1, 0); max(z_1^1, 0); dots.v; max(z_9^1, 0))
+  upright(bold(a)) = mat(a_0; a_1; dots.v; a_9) = mat(max(colblue(z_0), 0); max(colblue(z_1), 0); dots.v; max(colblue(z_9), 0))
+$
+
+$
+  upright(bold(z))_2 = colred(mat(z_0; z_1; dots.v; z_9)) = mat(colred(w_(0,0)) dot.c a_0 + colred(w_(0,1)) dot.c a_1 + dots.c + colred(w_(0,9)) dot.c a_9 + colred(b_0); colred(w_(1,0)) dot.c a_0 + colred(w_(1,1)) dot.c a_1 + dots.c + colred(w_(1,9)) dot.c a_9 + colred(b_1); dots.v; colred(w_(9,0)) dot.c a_0 + colred(w_(9,1)) dot.c a_1 + dots.c + colred(w_(9,9)) dot.c a_9 + colred(b_9))
+$
+
+我们现在可以看到$upright(bold(z))_2$是一个$10 times 1$形状的向量。但是我们都知道我们要输出的是图片$x$属于每个类别的概率（共10个分类）。
+
+所以我们需要将$upright(bold(z))_2$中的每个元素转换成概率值，也就是10个元素的和是1。
+
+我们需要找到一个函数能够将$upright(bold(z))_2$转换成概率值，同时不能改变$upright(bold(z))_2$中每个元素的大小顺序。
+
+也即是如果在$upright(bold(z))_2$中，$colred(z_0) < colred(z_2)$，那么这两个元素转换成概率值以后，还得是第0个元素小于第2个元素。
+
+能够达到这个目的的函数就是大名鼎鼎的"softmax"函数。
+
+#figure(
+  image("figures/softmax.svg"),
+  caption: [softmax函数],
+)
+
+softmax函数的主要作用是将任意实数的向量转换为概率。上图公式中的指数函数确保了得到的值是非负的。由于分母中的归一化项，得到的值总和为1。此外，所有值都介于0和1之间。softmax函数的一个重要特性是它能保持其输入值的排序顺序：
+
+$
+  -1.7 < 0.2 < 1.1 < 2.2 arrow.double.long 0.013 < 0.091 < 0.224 < 0.672
+$
+
+所以我们的神经网络的输出是
+
+$
+  "output" = mat(s_0; s_1; dots.v; s_9) = mat(e^(colred(z_0))/(sum_(l=0)^9 e^(colred(z_l))); e^(colred(z_1))/(sum_(l=0)^9 e^(colred(z_l))); dots.v; e^(colred(z_9))/(sum_(l=0)^9 e^(colred(z_l))))
+$
+
+这样我们就可以将输出解释为属于某个分类的概率了。这里要注意的是我们只是能将输出解释为概率，只有经过神经网络的训练，输出才会慢慢接近真正的概率值。
+
+== 如何设计损失函数？
+
+由于神经网络在接收一张图片作为输入后，输出是属于分类的概率组成的向量。
+
+$
+  "output" = mat(s_0; s_1; dots.v; s_9)
+$
+
+例如手写数字5在输入给未经训练的神经网络以后输出的概率如下
+
+$
+  #image("figures/hand-digit-5.png", width: 1.5em) arrow.double.long f(bullet) arrow.double.long mat(0.1; 0.1; 0.1; 0.1; 0.1; colred(0.001); 0.1; 0.1; 0.199; 0.1)
+$
+
+也就是针对图片预测为正确分类5的概率是0.001，错的离谱。而我们的标签数据是5，是没有办法和输出的概率向量做比较的，那么如何做比较呢？那就是将标签数据5转换成向量，也就是*独热编码*（one-hot encoder）。
+
+$
+  5 arrow.double.long "独热编码" arrow.double.long mat(0; 0; 0; 0; 0; markhl(1, tag: #<onehot>); 0; 0; 0; 0)
+  #annot(<onehot>, [索引为5的元素编码为1，\ 其它元素一律编码为0], leader-tip: tiptoe.triangle, pos: right + top, dy: -1.5em, dx: 1.5em)
+$
+
+独热编码的直观解释其实就是：手写数字5图片属于分类5的概率为1。
+
+代码如下：
+
+```python
+def one_hot(Y):
+    one_hot_Y = np.zeros((Y.size, Y.max() + 1))
+    one_hot_Y[np.arange(Y.size), Y] = 1
+    one_hot_Y = one_hot_Y.T
+    return one_hot_Y
+
+print(one_hot(Y_train)) # 对所有数据进行独热编码
+print(Y_train[10]) # 第10张图片的标签
+print(one_hot(Y_train)[:, 10]) # 第10张图片的标签的独热编码
+```
+
+有了独热编码之后，如何度量预测的概率向量和真实的独热向量之间的损失呢？
+
+$
+  upright(bold(s)) = mat(s_0; s_1; s_2; s_3; s_4; markhl(s_5); s_6; s_7; s_8; s_9) arrow.l.double.long "如何度量两者之间的差异？" arrow.double.long upright(bold(y)) = mat(0; 0; 0; 0; 0; markhl(1); 0; 0; 0; 0)
+$
+
+这就是*交叉熵损失函数*
+
+$
+  cal(L)(upright(bold(s)), upright(bold(y))) = -sum_(k=0)^9 y_k log(s_k)
+$
+
+由于one-hot的性质（只有$y_5=1$），所以化简可以得到
+
+$
+  cal(L) = -log(s_5)
+$
+
+#danger(title: [损失函数])[
+  到目前为止，我们接触了两种损失函数：
+  - 均方误差损失（mean square error loss，MSE loss）：用在线性回归中
+  - 交叉熵损失（cross entropy loss，CE loss）：用在分类任务中
+  这两种损失函数并不是*拍脑袋*得来的，而是有着严谨的数学背景，我们后面会讲解。
+]
+
+*直觉和例子*
+
+交叉熵在做两件事：
+
+- 如果$s_i$很大（接近1），则$-log(s_i)$很小，损失小
+- 如果$s_i$很大（接近0），则$-log(s_i)$很大，损失大
+
+举个数值感受一下
+
+- 如果$s_i=0.999$，那么$cal(L) = -log(0.999) approx 0.001$
+- 如果$s_i=0.001$，那么$cal(L) = -log(0.001) approx 6.907$
+
+可见预测的分类越准确，那么损失越小。可以作为度量。
+
+== 如何让损失函数最小？
+
+我们使用的算法是梯度下降法，而梯度下降法需要求导数然后再更新参数，所以我们分两步走
+
+1. 对参数$w_1,b_1,w_2,b_2$求偏导数。
+2. 更新参数。
+
+我们还记得神经网络的函数如下所示：
+
+$
+  "output" = "softmax"(upright(bold(w))_2 dot.c "ReLU"(upright(bold(w))_1 dot.c upright(bold(x)) + upright(bold(b))_1) + upright(bold(b))_2)
+$
+
+如果将上面的式子拆分开，就得到了
+
+$
+  upright(bold(z))_1 & = upright(bold(w))_1 upright(bold(x)) + upright(bold(b))_1 \
+    upright(bold(a)) & = "ReLU"(upright(bold(z))_1) \
+  upright(bold(z))_2 & = upright(bold(w))_2 upright(bold(a)) + upright(bold(b))_2 \
+            "output" & = "softmax"(upright(bold(z))_2)
+$
+
+而这就是反向传播算法的*前向传播过程*，代码如下：
+
+```python
+def forward(w1, b1, w2, b2, X):
+    z1 = w1.dot(X) + b1
+    a = ReLU(z1)
+    z2 = w2.dot(a) + b2
+    output = softmax(z2)
+    return z1, a, z2, output
+```
+
+对应的ReLU函数和softmax函数如下：
+
+```python
+def ReLU(Z):
+    return np.maximum(Z, 0)
+
+def softmax(Z):
+    A = np.exp(Z) / sum(np.exp(Z))
+    return A
+```
+
+我们在前向过程中保存了一些中间计算结果：`z1`，`a`，`z2`。用于在反向传播过程中求解损失函数$cal(L)$对参数的导数。
+
+$
+  (partial cal(L))/(partial upright(bold(w))_2) & = ? \
+  (partial cal(L))/(partial upright(bold(b))_2) & = ? \
+  (partial cal(L))/(partial upright(bold(w))_1) & = ? \
+  (partial cal(L))/(partial upright(bold(b))_1) & = ? \
+$
+
+根据链式求导法则
+
+$
+  (partial cal(L))/(partial upright(bold(w))_2) & = (partial cal(L))/(partial"output") (partial"output")/(partial upright(bold(z))_2) (partial upright(bold(z))_2)/(partial upright(bold(w))_2) \
+  (partial cal(L))/(partial upright(bold(b))_2) & = (partial cal(L))/(partial"output") (partial"output")/(partial upright(bold(z))_2) (partial upright(bold(z))_2)/(partial upright(bold(b))_2) \
+  (partial cal(L))/(partial upright(bold(w))_1) & = (partial cal(L))/(partial"output") (partial"output")/(partial upright(bold(z))_2) (partial upright(bold(z))_2)/(partial upright(bold(a))) (partial upright(bold(a)))/(partial upright(bold(z))_1) (partial upright(bold(z))_1)/(partial upright(bold(w))_1) \
+  (partial cal(L))/(partial upright(bold(b))_1) & = (partial cal(L))/(partial"output") (partial"output")/(partial upright(bold(z))_2) (partial upright(bold(z))_2)/(partial upright(bold(a))) (partial upright(bold(a)))/(partial upright(bold(z))_1) (partial upright(bold(z))_1)/(partial upright(bold(b))_1) \
+$
+
+这里的变量都是矩阵或者向量，所以求导数很复杂，这里我们先给出结论。
+
+$
+  (partial cal(L))/(partial"output") = "output" - upright(bold(y)) \
 $
 
 
