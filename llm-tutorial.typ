@@ -606,7 +606,7 @@ $
 
 $
   #image("figures/hand-digit-5.png", width: 1.5em) arrow f(bullet) arrow mat(0.01("预测为手写数字0的概率"); 0.01("预测为手写数字1的概率"); 0.01("预测为手写数字2的概率"); 0.01("预测为手写数字3的概率"); 0.01("预测为手写数字4的概率"); markhl(0.90("预测为手写数字5的概率")); 0.01("预测为手写数字6的概率"); 0.01("预测为手写数字7的概率"); 0.01("预测为手写数字8的概率"); 0.02("预测为手写数字9的概率"))
-$
+$ <nnasf>
 
 也就是说，我们要构造一个函数，能够接收手写数字图片为输入，而输出是手写数字属于每一个分类的概率所组成的向量！
 
@@ -729,6 +729,96 @@ X_train = X_train / 255.0 # 将像素点进行归一化
 ```
 
 这样我们的数据集就准备好了。
+
+== 神经网络模型结构的设计
+
+在 @nnasf 中，我们知道神经网络其实是一个函数$f(bullet)$。只不过这个函数可能比较复杂，参数比较多。
+
+一个简单的ReLU神经元如下所示：
+
+#figure(
+  image("figures/relu-neuron.png", width: 50%),
+  caption: [ReLU神经元],
+)
+
+其中ReLU（Rectified Linear Unit，整流线型单元）激活函数的定义如下：
+
+$
+  "ReLU"(x) = max(0, x) = cases(x space "if" space x > 0, 0 space space x <= 0)
+$
+
+#figure(
+  image("figures/relu-activation.png", width: 50%),
+  caption: [ReLU激活函数],
+)
+
+上面的图像如果写成数学函数，就有
+
+$
+  f(x) & = "ReLU"(w_1 x_1 + w_2 x_2 + dots.c + w_n x_n + b) \
+       & = "ReLU"(mat(w_1, w_2, dots.c, w_n) dot.c mat(x_1; x_2; dots.v; x_n) + b)
+$
+
+这个ReLU神经元本身用处不大，但如果有序的组织起来，就能发挥巨大的威力。因为ReLU是一个非线性的函数，所以在神经网络中可以引入非线性因素，事实上，ReLU神经元的叠加可以拟合任意函数，这叫做神经网络的*万能逼近定理*。
+
+#tip(title: [为什么要引入非线性函数？])[
+  考虑一元线性函数的简单复合，例如
+  $
+    f(x) & = w_2(w_1 x + b_1) + b_2 \
+         & = underbrace(w_2 w_1, w)x + underbrace(w_2 b_1 + b_2, b) \
+         & = w x + b
+  $
+  可以看到，线性函数的简单复合还是一个线性函数，所以无法拟合比较复杂的函数。
+]
+
+我们要设计的网络结构如下：
+
+#figure(
+  image("figures/网络结构.svg"),
+  caption: [用于解决手写数字分类的神经网络结构，其中蓝色部分为需要学习的参数],
+)
+
+在上面的网络中，我们的输入数据是一张784像素点的图片数据
+
+$
+  x = mat(x_0; x_1; dots.v; x_783)
+$
+
+输出是这张图片属于某一个分类的概率（预测值）。
+
+$
+  "output" = mat("属于手写数字分类0的概率"; "属于手写数字分类1的概率"; dots.v; "属于手写数字分类9的概率")
+$
+
+而参数$w_1, b_1, w_2, b_2$是需要*学习*的参数，也就是说在训练过程中不断的改变的参数。我们希望在训练完成以后，给神经网络这个函数输入一张图片数据，能够得到它的分类的概率。其中概率最大的分类，是这张图片的正确分类。
+
+$
+  upright(bold(w))_1 = mat(w_(0,0)^1, w_(0,1)^1, dots.c, w_(0,783)^1; w_(1,0)^1, w_(1,1)^1, dots.c, w_(1,783)^1; dots.v, dots.v, dots.down, dots.v; w_(9,0)^1, w_(9,1)^1, dots.c, w_(9,783)^1) space space space colblue("（上标1表示都是"upright(bold(w))_1"的参数）")
+$
+
+$
+  upright(bold(b))_1 = mat(b_0^1; b_1^1; b_2^1; dots.v; b_9^1) space space space colblue("（上标1表示都是"upright(bold(b))_1"的参数）")
+$
+
+$
+  upright(bold(w))_2 = mat(w_(0,0)^2, w_(0,1)^2, dots.c, w_(0,9)^2; w_(1,0)^2, w_(1,1)^2, dots.c, w_(1,9)^2; dots.v, dots.v, dots.down, dots.v; w_(9,0)^2, w_(9,1)^2, dots.c, w_(9,9)^2) space space space colblue("（上标2表示都是"upright(bold(w))_2"的参数）")
+$
+
+$
+  upright(bold(b))_1 = mat(b_0^2; b_1^2; b_2^2; dots.v; b_9^2) space space space colblue("（上标2表示都是"upright(bold(b))_2"的参数）")
+$
+
+其中计算的中间值有
+
+$
+  upright(bold(z))_1 = mat(z_0^1; z_1^1; dots.v; z_9^1) = mat(w_(0,0)^1 dot.c x_0 + w_(0,1)^1 dot.c x_1 + dots.c + w_(0,783)^1 dot.c x_783 + b_0^1; w_(1,0)^1 dot.c x_0 + w_(1,1)^1 dot.c x_1 + dots.c + w_(1,783)^1 dot.c x_783 + b_1^1; dots.v; w_(9,0)^1 dot.c x_0 + w_(9,1)^1 dot.c x_1 + dots.c + w_(9,783)^1 dot.c x_783 + b_9^1;)
+$
+
+$
+  upright(bold(a))_1 = mat(a_0^1; a_1^1; dots.v; a_9^1) = mat(max(z_0^1, 0); max(z_1^1, 0); dots.v; max(z_9^1, 0))
+$
+
+
 
 #chapter("卷积神经网络：将手写数字识别准确率拉满！", image: image("./orange2.jpg"), l: "dl-cnn")
 
@@ -1961,7 +2051,7 @@ def main(rank, world_size, num_epochs):
 - 在CPU或单个GPU上训练模型是最简单的。
 - 如果有多个GPU可用，那么使用DistributedDataParallel是PyTorch中加速训练的最简单方式。
 
-#chapter("自然语言处理：从零实现大语言模型", image: image("./orange2.jpg"), l: "dl-llm-from-scratch")
+#chapter("Transformer：从零实现大语言模型", image: image("./orange2.jpg"), l: "dl-llm-from-scratch")
 
 
 
