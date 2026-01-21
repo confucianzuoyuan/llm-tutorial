@@ -6,6 +6,22 @@ data = pd.read_csv("mnist_train.csv")
 
 print(data.head())
 
+first_row = data.iloc[0]
+label = first_row.iloc[0]
+pixels = first_row.iloc[1:].values
+
+# 将一维数组重塑为28x28的图像
+image = pixels.reshape(28, 28)
+
+# 创建图形
+plt.figure(figsize=(6, 6))
+plt.imshow(image, cmap='gray')
+plt.title(f'Label: {int(label)}', fontsize=16)
+plt.axis('off')
+plt.colorbar(label='Pixel Intensity')
+plt.tight_layout()
+plt.show()
+
 data = np.array(data)
 print(data.shape)
 

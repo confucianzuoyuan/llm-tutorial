@@ -629,7 +629,112 @@ $
 
 本章使用的数据集为MNIST数据集。MNIST数据集是机器学习领域的经典基准数据集。它包含28x28个像素点（784个像素点）的手写数字（0-9）灰度图像及其对应标签。我们的目标是构建一个能够根据像素值准确分类这些数字的神经网络。
 
+== 准备训练数据集
 
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+data = pd.read_csv("mnist.csv")
+print(data.head())
+```
+
+可以看到我们将数据集的前5行打印了出来。
+
+#figure(
+  image("figures/mnist.png"),
+  caption: [mnist数据集的前5行，形状为5x785],
+)
+
+"label"这一列表示的是手写数字的分类，例如第一列的label是5，所以后面的像素点渲染出来是手写数字5。
+
+从列1x1到28x28共784个像素点，是手写数字图片的每个像素点的值。可以看到很多0，也就是手写数字图片中的很多像素点都是黑色。我们可以尝试将第一行的784个像素点渲染成图片。
+
+```python
+first_row = data.iloc[0]
+label = first_row.iloc[0]
+pixels = first_row.iloc[1:].values
+
+# 将一维数组重塑为28x28的图像
+image = pixels.reshape(28, 28)
+
+# 创建图形
+plt.figure(figsize=(6, 6))
+plt.imshow(image, cmap='gray')
+plt.title(f'Label: {int(label)}', fontsize=16)
+plt.axis('off')
+plt.colorbar(label='Pixel Intensity')
+plt.tight_layout()
+plt.show()
+```
+
+可以得到图如下：
+
+#figure(
+  image("figures/hand-5-render.svg", width: 20%),
+  caption: [第一行的图片],
+)
+
+我们数据集中一共有60000张图片，以及对应的60000个标签。我们先将数据转换成numpy的ndarray格式的数据，然后将数据打乱。
+
+```python
+data = np.array(data) # 转换成ndarray格式
+print(data.shape) # 打印形状
+m, n = data.shape
+np.random.shuffle(data) # 打乱数据
+```
+
+可以看到数据的形状是`(60000, 785)`。
+
+我们接下来要将数据集切分为*训练数据集*和*验证数据集*。
+
+#tip(title: [训练数据集和验证数据集])[
+  - 训练数据集：用来训练我们的神经网络
+  - 验证数据集：用来验证训练好的神经网络表现怎么样
+]
+
+我们选择前1000行数据作为验证集
+
+```python
+data_dev = data[0: 1000].T # 取前1000行，并转置
+print(data_dev.shape)
+```
+
+可以看到`data_dev`的形状是：`(785, 1000)`。也就是说，数据的每一列都是"1个标签+784个像素点"，方便我们后续处理。
+
+然后我们将验证集数据的标签和像素点数据拆分开，先来提取标签数据
+
+```python
+Y_dev = data_dev[0] # 提取标签数据
+print(Y_dev.shape) # 形状：(1000,)
+```
+
+然后提取标签对应的像素点数据，需要注意的是灰度图的每个像素点的范围是0～255，像素点的类型是整型，为了方便处理，我们进行归一化，也就是将所有像素点的值归一化到0～1之间。
+
+```python
+X_dev = data_dev[1 : n] # 提取像素点数据
+X_dev = X_dev / 255.0 # 将像素点归一化
+print(X_dev.shape) # 形状：(784, 1000)
+```
+
+剩下的59000条数据我们作为训练模型用的训练数据集。处理方式和上面的验证集基本相同
+
+```python
+data_train = data[1000 : m].T # 取后面的59000行数据并转置
+print(data_train.shape) # 形状：(785, 59000)
+Y_train = data_train[0] # 提取标签，形状为(59000,)
+X_train = data_train[1 : n] # 提取像素点的数据，形状为(784, 59000)
+X_train = X_train / 255.0 # 将像素点进行归一化
+```
+
+这样我们的数据集就准备好了。
+
+#chapter("卷积神经网络：将手写数字识别准确率拉满！", image: image("./orange2.jpg"), l: "dl-cnn")
+
+#chapter("损失函数：均方误差损失和交叉熵损失的由来", image: image("./orange2.jpg"), l: "dl-loss-function")
+
+#chapter("神经网络的学习：使用梯度下降法使损失函数最小化", image: image("./orange2.jpg"), l: "dl-nn-learn")
 
 #chapter("PyTorch简介", image: image("./orange2.jpg"), l: "dl-pytorch")
 
@@ -1855,6 +1960,10 @@ def main(rank, world_size, num_epochs):
 - PyTorch提供了Dataset类和DataLoader类来建立高效的数据加载流水线。
 - 在CPU或单个GPU上训练模型是最简单的。
 - 如果有多个GPU可用，那么使用DistributedDataParallel是PyTorch中加速训练的最简单方式。
+
+#chapter("自然语言处理：从零实现大语言模型", image: image("./orange2.jpg"), l: "dl-llm-from-scratch")
+
+
 
 #chapter("数学基础", image: image("./orange2.jpg"), l: "dl-math")
 
