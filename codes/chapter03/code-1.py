@@ -77,7 +77,7 @@ def one_hot(Y):
 def deriv_ReLU(Z):
     return Z > 0
 
-
+# z1, a1, z2, a2: M, A, Z, output
 def back_prop(z1, a1, z2, a2, w2, Y, X):
     OneHot_Y = one_hot(Y)
     dZ2 = a2-OneHot_Y
