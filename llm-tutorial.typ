@@ -803,6 +803,20 @@ $
   upright(bold(Z)) = upright(bold(W))^[2]upright(bold(A)) + upright(bold(b))^[2] = mat(z_00, z_01, z_02; z_10, z_11, z_12; z_20, z_21, z_22)
 $
 
+其中
+
+$
+  z_00 & = w_00^[2] dot.c a_00 + w_01^[2] dot.c a_10 + w_02^[2] dot.c a_20 + b_0^[2] \
+  z_01 & = w_00^[2] dot.c a_01 + w_01^[2] dot.c a_11 + w_02^[2] dot.c a_21 + b_0^[2] \
+  z_02 & = w_00^[2] dot.c a_02 + w_01^[2] dot.c a_12 + w_02^[2] dot.c a_22 + b_0^[2] \
+  z_10 & = w_10^[2] dot.c a_00 + w_11^[2] dot.c a_10 + w_12^[2] dot.c a_20 + b_1^[2] \
+  z_11 & = w_10^[2] dot.c a_01 + w_11^[2] dot.c a_11 + w_12^[2] dot.c a_21 + b_1^[2] \
+  z_12 & = w_10^[2] dot.c a_02 + w_11^[2] dot.c a_12 + w_12^[2] dot.c a_22 + b_1^[2] \
+  z_20 & = w_20^[2] dot.c a_00 + w_21^[2] dot.c a_10 + w_22^[2] dot.c a_20 + b_2^[2] \
+  z_21 & = w_20^[2] dot.c a_01 + w_21^[2] dot.c a_11 + w_22^[2] dot.c a_21 + b_2^[2] \
+  z_22 & = w_20^[2] dot.c a_02 + w_21^[2] dot.c a_12 + w_22^[2] dot.c a_22 + b_2^[2] \
+$
+
 我们现在可以看到$upright(bold(Z))$是一个$3 times 3$形状的向量。但是我们都知道我们要输出的是数据$upright(bold(X))$属于每个类别的概率（共3个分类）。
 
 所以我们需要将$upright(bold(Z))$中的每个元素转换成概率值，也就是每一列的3个元素的和是1。
@@ -812,6 +826,346 @@ $
 也即是如果在$upright(bold(Z))$中，$z_00 < z_20$，那么这两个元素转换成概率值以后，还得是第00个元素小于第20个元素。
 
 能够达到这个目的的函数就是大名鼎鼎的"softmax"函数。
+
+
+#figure(
+  image("figures/softmax.svg"),
+  caption: [softmax函数],
+)
+
+softmax函数的主要作用是将任意实数的向量转换为概率。上图公式中的指数函数确保了得到的值是非负的。由于分母中的归一化项，得到的值总和为1。此外，所有值都介于0和1之间。softmax函数的一个重要特性是它能保持其输入值的排序顺序：
+
+$
+  -1.7 < 0.2 < 1.1 < 2.2 arrow.double.long 0.013 < 0.091 < 0.224 < 0.672
+$
+
+所以我们的神经网络的输出是
+
+$
+  upright(bold(s)) = "output" = mat(s_00, s_01, s_02; s_10, s_11, s_12; s_20, s_21, s_22)
+$
+
+其中
+
+$
+  s_00 & = e^(z_00)/(e^(z_00)+e^(z_10)+e^(z_20)) \
+  s_01 & = e^(z_01)/(e^(z_01)+e^(z_11)+e^(z_21)) \
+  s_02 & = e^(z_02)/(e^(z_02)+e^(z_12)+e^(z_22)) \
+  s_10 & = e^(z_10)/(e^(z_00)+e^(z_10)+e^(z_20)) \
+  s_11 & = e^(z_11)/(e^(z_01)+e^(z_11)+e^(z_21)) \
+  s_12 & = e^(z_12)/(e^(z_02)+e^(z_12)+e^(z_22)) \
+  s_20 & = e^(z_20)/(e^(z_00)+e^(z_10)+e^(z_20)) \
+  s_21 & = e^(z_21)/(e^(z_01)+e^(z_11)+e^(z_21)) \
+  s_22 & = e^(z_22)/(e^(z_02)+e^(z_12)+e^(z_22))
+$
+
+这样我们就可以将输出解释为属于某个分类的概率了。这里要注意的是我们只是能将输出解释为概率，只有经过神经网络的训练，输出才会慢慢接近真正的概率值。
+
+=== 如何设计损失函数？
+
+由于神经网络在接收3条数据作为输入后，输出是属于分类的概率组成的向量。
+
+$
+  upright(bold(s)) = "output" = mat(s_00, s_01, s_02; s_10, s_11, s_12; s_20, s_21, s_22)
+$
+
+例如我们的训练数据有3条，在输入给未经训练的神经网络以后输出的概率如下
+
+$
+  mat(50, 120, 200; 60, 130, 210; 55, 125, 205; 65, 135, 215) arrow.double.long f(bullet) arrow.double.long mat(markhl(0.01), 0.5, 0.49; 0.5, markhl(0.02), 0.48; 0.4, 0.5, markhl(0.1))
+$
+
+也就是针对3条数据预测为正确分类的概率是`0.01, 0.02, 0.1`，错的离谱。而我们的标签数据是`[0, 1, 2]`，是没有办法和输出的概率向量做比较的，那么如何做比较呢？那就是将标签数据转换成向量，也就是*独热编码*（one-hot encoder）。
+
+$
+  \
+  \
+  \
+  \
+  [0, 1, 2] arrow.double.long "独热编码" arrow.double.long mat(markhl(1, tag: #<onehot>), 0, 0; 0, 1, 0; 0, 0, 1)
+  #annot(<onehot>, [索引为0的元素编码为1，\ 其它元素一律编码为0], leader-connect: "elbow", pos: right + top, dy: -1.5em, dx: 1.5em)
+$
+
+也就是我们共有3个标签，`0,1,2`，分别独热编码为3个列向量。
+
+$
+  0 & arrow.double.long "one-hot" arrow.double.long mat(1; 0; 0) \
+  1 & arrow.double.long "one-hot" arrow.double.long mat(0; 1; 0) \
+  2 & arrow.double.long "one-hot" arrow.double.long mat(0; 0; 1) \
+$
+
+独热编码的直观解释其实就是：第0条数据属于分类0的概率为1。
+
+代码如下：
+
+```python
+def one_hot(Y):
+    one_hot_Y = np.zeros((Y.size, Y.max() + 1))
+    one_hot_Y[np.arange(Y.size), Y] = 1
+    one_hot_Y = one_hot_Y.T
+    return one_hot_Y
+
+print(one_hot(Y)) # 对所有数据进行独热编码
+print(Y[1]) # 第1条数据的标签
+print(one_hot(Y)[:, 1]) # 第1条数据的标签的独热编码
+```
+
+有了独热编码之后，如何度量预测的概率向量和真实的独热向量之间的损失呢？
+
+$
+  upright(bold(s)) = mat(markhl(s_00), s_01, s_02; s_10, markhl(s_11), s_12; s_20, s_21, markhl(s_22)) arrow.l.double.long "如何度量两者之间的差异？" arrow.double.long upright(bold(y)) = mat(markhl(1), 0, 0; 0, markhl(1), 0; 0, 0, markhl(1))
+$
+
+这就是*交叉熵损失函数*
+
+$
+  cal(L)(upright(bold(s)), upright(bold(y))) = -sum_(j=0)^2 sum_(i=0)^2 y_(i j) log(s_(i j))
+$
+
+由于one-hot的性质（只有$y_00=1, y_11=1, y_22=1$），所以化简可以得到
+
+$
+  cal(L) = -log(s_00) - log(s_11) - log(s_22)
+$
+
+#danger(title: [损失函数])[
+  到目前为止，我们接触了两种损失函数：
+  - 均方误差损失（mean square error loss，MSE loss）：用在线性回归中
+  - 交叉熵损失（cross entropy loss，CE loss）：用在分类任务中
+  这两种损失函数并不是*拍脑袋*得来的，而是有着严谨的数学背景，我们后面会讲解。
+]
+
+*直觉和例子*
+
+交叉熵在做两件事：
+
+- 如果$s$很大（接近1），则$-log(s)$很小，损失小
+- 如果$s$很大（接近0），则$-log(s)$很大，损失大
+
+举个数值感受一下
+
+- 如果$s=0.999$，那么$cal(L) = -log(0.999) approx 0.001$
+- 如果$s=0.001$，那么$cal(L) = -log(0.001) approx 6.907$
+
+可见预测的分类越准确，那么损失越小。可以作为度量。
+
+=== 如何让损失函数最小？
+
+我们使用的算法是梯度下降法，而梯度下降法需要求导数然后再更新参数，所以我们分两步走
+
+1. 对参数$upright(bold(W))^[1],upright(bold(b))^[1],upright(bold(W))^[2],upright(bold(b))^[2]$求偏导数。
+2. 更新参数。
+
+我们还记得神经网络的函数如下所示：
+
+$
+  upright(bold(S)) = "output" = "softmax"(upright(bold(W))^[2] dot.c "ReLU"(upright(bold(W))^[1] dot.c upright(bold(X)) + upright(bold(b))^[1]) + upright(bold(b))^[2])
+$
+
+如果将上面的式子拆分开，就得到了
+
+$
+  upright(bold(M)) & = upright(bold(W))^[1] upright(bold(X)) + upright(bold(b))^[1] \
+  upright(bold(A)) & = "ReLU"(upright(bold(M))) \
+  upright(bold(Z)) & = upright(bold(W))^[2] upright(bold(A)) + upright(bold(b))^[2] \
+  upright(bold(S)) & = "softmax"(upright(bold(Z)))
+$
+
+而这就是反向传播算法的*前向传播过程*，代码如下：
+
+```python
+def forward(w1, b1, w2, b2, X):
+    M = w1.dot(X) + b1
+    A = ReLU(M)
+    Z = w2.dot(A) + b2
+    S = softmax(Z)
+    return M, A, Z, S
+```
+
+对应的ReLU函数和softmax函数如下：
+
+```python
+def ReLU(M):
+    return np.maximum(M, 0)
+
+def softmax(Z):
+    S = np.exp(Z) / sum(np.exp(Z))
+    return S
+```
+
+我们在前向过程中保存了一些中间计算结果：`M`，`A`，`Z`，`S`。用于在反向传播过程中求解损失函数$cal(L)$对参数的导数。
+
+我们的损失函数是交叉熵损失函数（是一个标量值！）
+
+$
+  cal(L)(upright(bold(s)), upright(bold(y))) = -sum_(j=0)^2 sum_(i=0)^2 y_(i j) log(s_(i j))
+$
+
+那么损失函数如何对参数进行求偏导数呢？
+
+标量对向量或者矩阵求导的形状和向量或者矩阵的形状一样，例如：
+
+$
+  (partial cal(L))/(partial upright(bold(W))^[2]) = mat((partial cal(L))/(partial w_00^[2]), (partial cal(L))/(partial w_01^[2]), (partial cal(L))/(partial w_02^[2]); (partial cal(L))/(partial w_10^[2]), (partial cal(L))/(partial w_11^[2]), (partial cal(L))/(partial w_12^[2]); (partial cal(L))/(partial w_20^[2]), (partial cal(L))/(partial w_21^[2]), (partial cal(L))/(partial w_22^[2]))
+$
+
+#tip(title: [标量函数的链式求导])[
+  $
+    (upright(d)cal(L))/(upright(d)w) = (upright(d)cal(L))/(upright(d)s) dot.c (upright(d)s)/(upright(d)z) dot.c (upright(d)z)/(upright(d)w)
+  $
+  可以看到，是比较简单的，但是矩阵或者向量的链式求导就很复杂了！但是依然遵循标量求导的规则。矩阵只是表示法而已！
+]
+
+我们先来求解$(partial cal(L))/(partial upright(bold(Z)))$
+
+$
+  (partial cal(L))/(partial upright(bold(Z))) = mat((partial cal(L))/(partial z_00), (partial cal(L))/(partial z_01), (partial cal(L))/(partial z_02); (partial cal(L))/(partial z_10), (partial cal(L))/(partial z_11), (partial cal(L))/(partial z_12); (partial cal(L))/(partial z_20), (partial cal(L))/(partial z_21), (partial cal(L))/(partial z_22))
+$
+
+那么偏导数矩阵中的每个元素该如何计算呢？
+
+我们首先知道
+
+$
+  y_(i j)log(s_(i j)) & = y_(i j)log e^(z_(i j))/(e^(z_(0 j)) + e^(z_(1 j)) + e^(z_(2 j))) space space space colblue("（对数性质）") \
+  & = y_(i j) (z_(i j) - log(e^(z_(0 j)) + e^(z_(1 j)) + e^(z_(2 j))))
+$
+
+又因为独热编码的性质
+
+$
+  y_(0 j) + y_(1 j) + y_(2 j) = 1
+$
+
+所以损失函数可以化简为
+
+$
+  cal(L) = -{y_00z_00 + y_01z_01 + y_02z_02 \
+    + y_10z_10 + y_11z_11 + y_12z_12\
+    + y_20z_20 + y_21z_21 + y_22z_22\
+    - log(e^(z_00) + e^(z_10) + e^(z_20))\
+    - log(e^(z_01) + e^(z_11) + e^(z_21))\
+    - log(e^(z_02) + e^(z_12) + e^(z_22))}
+$
+
+$
+  (partial cal(L))/(partial z_00) & = -{y_00 - e^(z_00)/(e^(z_00) + e^(z_10) + e^(z_20))} \
+                                  & = -{y_00 - s_00} = s_00 - y_00
+$
+
+最终得到了一个非常漂亮的结果，如下
+
+$
+  (partial cal(L))/(partial upright(bold(Z))) & = mat(s_00-y_00, s_01-y_01, s_02 - y_02; s_10-y_10, s_11-y_11, s_12 - y_12; s_20-y_20, s_21-y_21, s_22 - y_22;) \
+  & = upright(bold(s)) - upright(bold(y))
+$
+
+
+那么偏导数矩阵$(partial cal(L))/(partial upright(bold(W))^[2])$中的每个元素该如何计算呢？例如$(partial cal(L))/(partial w_00^[2])$？
+
+通过观察得到$cal(L)$中的$z_00, z_01, z_02$依赖于$w_00^[2]$。根据全微分公式
+
+$
+  (partial cal(L))/(partial w_00^[2]) & = (partial cal(L))/(partial z_00) (partial z_00)/(partial w_00^[2]) + (partial cal(L))/(partial z_01) (partial z_01)/(partial w_00^[2]) + (partial cal(L))/(partial z_02) (partial z_02)/(partial w_00^[2]) \
+  & = (s_00 - y_00)a_00 + (s_01 - y_01)a_01 + (s_02 - y_02)a_02
+$
+
+所以有如下
+
+$
+  (partial cal(L))/(partial w_(00)^[2]) & = (s_(00) - y_(00))a_(00) + (s_(01) - y_(01))a_(01) + (s_(02) - y_(02))a_(02) \
+  (partial cal(L))/(partial w_(01)^[2]) & = (s_(00) - y_(00))a_(10) + (s_(01) - y_(01))a_(11) + (s_(02) - y_(02))a_(12) \
+  (partial cal(L))/(partial w_(02)^[2]) & = (s_(00) - y_(00))a_(20) + (s_(01) - y_(01))a_(21) + (s_(02) - y_(02))a_(22) \
+  (partial cal(L))/(partial w_(10)^[2]) & = (s_(10) - y_(10))a_(00) + (s_(11) - y_(11))a_(01) + (s_(12) - y_(12))a_(02) \
+  (partial cal(L))/(partial w_(11)^[2]) & = (s_(10) - y_(10))a_(10) + (s_(11) - y_(11))a_(11) + (s_(12) - y_(12))a_(12) \
+  (partial cal(L))/(partial w_(12)^[2]) & = (s_(10) - y_(10))a_(20) + (s_(11) - y_(11))a_(21) + (s_(12) - y_(12))a_(22) \
+  (partial cal(L))/(partial w_(20)^[2]) & = (s_(20) - y_(20))a_(00) + (s_(21) - y_(21))a_(01) + (s_(22) - y_(22))a_(02) \
+  (partial cal(L))/(partial w_(21)^[2]) & = (s_(20) - y_(20))a_(10) + (s_(21) - y_(21))a_(11) + (s_(22) - y_(22))a_(12) \
+  (partial cal(L))/(partial w_(22)^[2]) & = (s_(20) - y_(20))a_(20) + (s_(21) - y_(21))a_(21) + (s_(22) - y_(22))a_(22)
+$
+
+通过观察可以知道
+
+$
+  (partial cal(L))/(partial upright(bold(W))^[2]) & = mat((partial cal(L))/(partial w_00^[2]), (partial cal(L))/(partial w_01^[2]), (partial cal(L))/(partial w_02^[2]); (partial cal(L))/(partial w_10^[2]), (partial cal(L))/(partial w_11^[2]), (partial cal(L))/(partial w_12^[2]); (partial cal(L))/(partial w_20^[2]), (partial cal(L))/(partial w_21^[2]), (partial cal(L))/(partial w_22^[2])) \
+  & = mat(s_00 - a_00, s_01 - a_01, s_02 - a_02; s_10 - a_10, s_11 - a_11, s_12 - a_12; s_20 - a_20, s_21 - a_21, s_22 - a_22;) dot.c mat(a_00, a_10, a_20; a_01, a_11, a_21; a_02, a_12, a_22;) \
+  & = (upright(bold(s)) - upright(bold(y))) dot.c upright(bold(A))^T
+$
+
+而我们知道
+
+$
+  (partial cal(L))/(partial upright(bold(Z))) = upright(bold(s)) - upright(bold(y))
+$
+
+所以
+
+$
+  (partial cal(L))/(partial upright(bold(W))^[2]) & = (partial cal(L))/(partial upright(bold(Z))) (partial upright(bold(Z)))/(partial upright(bold(W))^[2]) \
+  & = (partial cal(L))/(partial upright(bold(Z))) (partial upright(bold(W))^[2] upright(bold(A)) + upright(bold(b))^[2])/(partial upright(bold(W))^[2]) \
+  & = (partial cal(L))/(partial upright(bold(Z))) upright(bold(A))^T
+$
+
+这就是矩阵的链式求导公式！
+
+如果你愿意重复上面的过程，会发现
+
+$
+  (partial cal(L))/(partial upright(bold(b))^[2]) = (partial cal(L))/(partial upright(bold(Z)))
+$
+
+接下来我们要求解$(partial cal(L))/(partial upright(bold(W))^[1])$，那么先需要求解$(partial cal(L))/(partial upright(bold(M)))$。
+
+还是以$(partial cal(L))/(partial m_00)$为例子。我们观察到$z_00, z_10, z_20$依赖于$m_00$。所以根据全微分公式
+
+$
+  (partial cal(L))/(partial m_00) & = (partial cal(L))/(partial z_00) (partial z_00)/(partial m_00) + (partial cal(L))/(partial z_10) (partial z_10)/(partial m_00) + (partial cal(L))/(partial z_20) (partial z_20)/(partial m_00) \
+  & = (partial cal(L))/(partial z_00) (partial z_00)/(partial a_00) (partial a_00)/(partial m_00) + (partial cal(L))/(partial z_10) (partial z_10)/(partial a_00) (partial a_00)/(partial m_00) + (partial cal(L))/(partial z_20) (partial z_20)/(partial a_00) (partial a_00)/(partial m_00) \
+  & = {(s_00 - y_00) w_00^[2] + (s_10 - y_10) w_10^[2] + (s_20 - y_20) w_20^[2]} dot.c {1 "if" m_00 > 0 "else" 0}
+$
+
+那么可以得到矩阵表达形式
+
+$
+  (partial cal(L))/(partial upright(bold(M))) & = {upright(bold(W))^[2]}^T dot.c (upright(bold(s)) - upright(bold(y))) dot.o {1 "if" m_(i j) > 0 "else" 0} \
+  & = {{upright(bold(W))^[2]}^T dot.c (partial cal(L))/(partial upright(bold(Z)))} dot.o {1 "if" m_(i j) > 0 "else" 0}
+$
+
+那么根据全微分公式有如下
+
+$
+  (partial cal(L))/(partial w_00^[1]) & = (partial cal(L))/(partial m_00) (partial m_00)/(partial w_00^[1]) + (partial cal(L))/(partial m_01) (partial m_01)/(partial w_00^[1]) + (partial cal(L))/(partial m_02) (partial m_02)/(partial w_00^[1]) \
+  & = mat((partial cal(L))/(partial m_00), (partial cal(L))/(partial m_01), (partial cal(L))/(partial m_02)) dot.c mat(x_00, x_01, x_02)^T
+$
+
+整理成矩阵形式如下
+
+$
+  (partial cal(L))/(partial upright(bold(W))^[1]) = (partial cal(L))/(partial upright(bold(M))) dot.c upright(bold(X))^T
+$
+
+同理可以得到
+
+$
+  (partial cal(L))/(partial upright(bold(b))^[1]) = (partial cal(L))/(partial upright(bold(M)))
+$
+
+写成代码如下
+
+```python
+def deriv_ReLU(Z):
+    return Z > 0
+
+def backward(M, A, Z, output, w2, Y, X):
+    OneHot_Y = one_hot(Y)
+    dZ = output - OneHot_Y
+    dW2 = 1/m * dZ.dot(A.T)
+    db2 = 1/m * np.sum(dZ)
+    dM = w2.T.dot(dZ) * deriv_ReLU(M)
+    dW1 = 1 / m * dM.dot(X.T)
+    db1 = 1 / m * np.sum(dM)
+    return dW1, db1, dW2, db2
+```
 
 == 准备训练数据集
 
