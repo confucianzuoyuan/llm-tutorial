@@ -323,7 +323,7 @@ $
 
 === 向量范数
 
-范数（norm）是具有“长度”概念的函数。
+范数（norm）是具有"长度"概念的函数。
 
 1. $L_0$范数
 
@@ -438,7 +438,129 @@ $
 特别的，矩阵和单位矩阵相乘等于矩阵本身。
 
 $
-  bold(A)bold(I) = bold(A) space space (bold(A) in RR^(m times n), bold(I) in RR^(n times n))
+  bold(A)bold(I) & = bold(A) space space (bold(A) in RR^(m times n), bold(I) in RR^(n times n)) \
+  bold(I)bold(A) & = bold(A) space space (bold(I) in RR^(n times n), bold(A) in RR^(n times m))
+$
+
+例如
+
+$
+  bold(A)bold(I) = mat(1, 2; 3, 5; 4, 8) dot.c mat(1, 0; 0, 1) = mat(1 times 1 + 2 times 0, 1 times 0 + 2 times 1; 3 times 1 + 5 times 0, 3 times 0 + 5 times 1; 4 times 1 + 8 times 0, 4 times 0 + 8 times 1) = mat(1, 2; 3, 5; 4, 8)
+$
+
+2. 矩阵乘法的性质
+
+矩阵乘法满足结合律、左分配律和右分配律。不满足交换律即$bold(A)bold(B) != bold(B)bold(A)$。
+
+- 结合律：若$bold(A) in RR^(m times n), bold(B) in RR^(n times p), bold(C) in RR^(p times q)$，则$(bold(A)bold(B))bold(C) = bold(A)(bold(B)bold(C))$。
+- 左分配律：若$bold(A) in RR^(m times n), bold(B) in RR^(m times n), bold(C) in RR^(p times q)$，则$(bold(A)+bold(B))bold(C) = bold(A)bold(C) + bold(B)bold(C)$。
+- 右分配律：若$bold(A) in RR^(m times n), bold(B) in RR^(n times p), bold(C) in RR^(n times p)$，则$bold(A)(bold(B)+bold(C)) = bold(A)bold(B) + bold(A)bold(C)$。
+
+=== 矩阵的逆
+
+对于方阵$bold(A)$，如果存在另一个方阵$bold(A)^(-1)$，使得$bold(A)bold(A)^(-1)=bold(I)$成立，此时$bold(A)^(-1)bold(A)=bold(I)$也同样成立。称$bold(A)^(-1)$为$bold(A)$的逆矩阵。例如：
+
+$
+  bold(A)bold(A)^(-1) = mat(1, 2; 3, 5) dot.c mat(-5, 2, ; 3, -1) = mat(1 times (-5) + 2 times 3, 1 times 2 + 2 times (-1); 3 times (-5) + 3 times 5, 3 times 2 + 5 times (-1)) = mat(1, 0; 0, 1)=bold(I)
+$
+
+=== 矩阵的Hadamard积
+
+矩阵$bold(A) in RR^(m times n)$和矩阵$bold(B) in RR^(m times n)$的Hadamard积记作$bold(A) dot.o bold(B)$，它是两个矩阵对应元素的乘积，是一个$m times n$的矩阵。
+
+$
+  (bold(A) dot.o bold(B))_(i j) = a_(i j)b_(i j)
+$
+
+=== 张量（tensor）
+
+张量（tensor）可视为多维数组，是标量，$1$维向量和$2$维矩阵的$n$维推广。
+
+例如：$3$维张量，形状是$3 times 3 times 2$
+
+$
+  mat(mat(1, 2; 3, 5; 4, 8), mat(3, 2; 1, 6; 7, 3), mat(5, 6; 9, 1; 2, 4))
+$
+
+== 微积分
+
+=== 导数
+
+==== 导数的概念
+
+#underline[导数]（derivative）是微积分中的一个概念。函数在某一点的导数是指这个函数在这一点附近的变化率（即函数在这一点的切线斜率）。导数的本质是通过极限的概念对函数进行局部的线性逼近。
+
+#figure(
+  image("figures/tangent-line.svg"),
+  caption: [导数是切线],
+)
+
+当函数$f$的自变量在一点$x_0$上产生一个增量$Delta x$时，函数输出值的增量$Delta y$与自变量增量$Delta x$的比值在$Delta x$趋于$0$时的极限如果存在，即为$f$在$x_0$处的导数，记作$f'(x_0)$、$(upright(d)f)/(upright(d)x) (x_0)$或$(upright(d)f)/(upright(d)x)|_(x=x_0)$。
+
+$
+  f'(x_0) = lim_(Delta x arrow 0) (Delta y)/(Delta x) = lim_(Delta x arrow 0) (f(x_0 + Delta x) - f(x_0))/(Delta x)
+$
+
+#figure(
+  image("figures/delta-x-delta-y.svg"),
+  caption: [求导数的原理],
+)
+
+可以将上面求导数的原理，直接转换成程序
+
+#codly(header: [数值微分])
+```python
+def derivative(f, x):
+    delta_x = 1e-5 # $Delta x$
+    deriv = (f(x + delta_x) - f(x)) / delta_x # $(f(x_0 + Delta x) - f(x_0))/(Delta x)$
+    return deriv
+```
+
+==== 基本函数的导数
+
+在机器学习和深度学习中，$log x = log_e x$，我们后面也用这种表示法。
+
+#figure(
+  table(
+    columns: 3,
+    align: center,
+    [*说明*], [*公式*], [*例子*],
+    [常数的导数], [$(C)'=0$], [$(3)'=0$],
+    [幂函数的导数], [$(x^alpha)'=alpha x^(alpha - 1)$], [$(x^3)'=3x^2$],
+    table.cell(rowspan: 2, [指数函数的导数]), [$(a^x)'=a^x log a$], [$(3^x)'=3^x log 3$], [$(e^x)'=e^x$], [——],
+    table.cell(rowspan: 2, [三角函数的导数]), [$(sin x)'=cos x$], [——], [$(cos x)' = -sin x$], [——],
+  ),
+  caption: [常见函数的导数],
+)
+
+==== 导数的求导法则
+
+#figure(
+  table(
+    columns: 2,
+    align: center,
+    [*说明*], [*公式*],
+    [两函数之和求导], [$(f+g)'=f'+g'$],
+    [两函数之积求导], [$(f g)'=f' g + f g'$],
+    [两函数之商求导], [$(f/g)'=(f' g - f g')/g^2$],
+    [复合函数求导（链式求导法则）],
+    [若$f(x)=h(g(x))$，则$(upright(d)f)/(upright(d)x) (x) = (upright(d)f)/(upright(d)h) dot.c (upright(d)h)/(upright(d)g) dot.c (upright(d)g)/(upright(d)x)$],
+  ),
+  caption: [导数的求导法则],
+)
+
+例如，求函数$f(x) = x^4 + sin(x^2) - log(x)e^x + 7$在$x=3$处的导数。
+
+$
+  f'(x) & = (x^4 + sin(x^2) - log(x)e^x + 7)' \
+        & = 4x^(4-1) + cos(x^2) dot.c 2x - (e^x/x + log(x)e^x) + 0 \
+        & = 4x^3 + 2x cos(x^2) - e^x/x - log(x)e^x
+$
+
+所以
+
+$
+  f'(3) = 108 + 6cos(9) - e^3/3 - log(3)e^3
 $
 
 #chapter("一元线性回归", image: image("./orange2.jpg"), l: "dl-linear-regression")
