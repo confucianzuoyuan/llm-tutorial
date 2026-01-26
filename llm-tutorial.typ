@@ -671,6 +671,63 @@ $
 
 梯度向量表示的方向，就是函数在这一点处，方向导数取最大值的方向。换句话说，梯度的方向，就是函数值变化最快的方向。
 
+=== 机器学习中常见函数求导
+
+1. Sigmoid函数求导
+
+Sigmoid函数定义如下：
+
+$
+  sigma(x) = 1/(1 + e^(-x))
+$
+
+求导过程如下
+
+$
+  sigma'(x) & = (0 dot.c (1 + e^(-x)) - 1 dot.c e^(-x) dot.c (-1)) / (1 + e^(-x))^2 \
+            & = 1/(1 + e^(-x)) dot.c e^(-x)/(1 + e^(-x)) \
+            & = 1/(1 + e^(-x)) dot.c (1 - 1/(1 + e^(-x))) \
+            & = sigma(x)(1-sigma(x))
+$
+
+2. ReLU函数求导
+
+$
+  "ReLU"(x) = max(x, 0)
+$
+
+求导结果如下
+
+$
+  "ReLU"'(x) = cases(1 "," x > 0, 0 "," x < 0)
+$
+
+注意！$0$点不可导。
+
+3. Tanh函数求导
+
+tanh函数定义如下
+
+$
+  tanh(x) = (e^x - e^(-x))/(e^x + e^(-x))
+$
+
+求导过程如下
+
+$
+  tanh'(x) & = ((upright(d)(e^x - e^(-x)))/(upright(d)x) dot.c (e^x + e^(-x)) - (upright(d)(e^x + e^(-x)))/(upright(x)) dot.c (e^x - e^(-x)))/(e^x + e^(-x))^2 \
+  & = ((e^x + e^(-x))^2 - (e^x - e^(-x))^2)/(e^x + e^(-x))^2 \
+  & = 1 - (e^x - e^(-x))^2/(e^x + e^(-x))^2 \
+  & = 1 - (tanh(x))^2
+$
+
+#figure(
+  image("figures/sigmoid-tanh-relu.svg"),
+  caption: [sigmoid, relu, tanh],
+)
+
+
+
 == 矩阵微积分
 
 矩阵求导的本质就是#underline[*标量函数*]对变量的每个元素逐个求导，只是写成了向量、矩阵的形式。
@@ -835,6 +892,108 @@ $
   upright(bold(H))_(i j) = (partial^2 f)/(partial x_i partial x_j)
 $
 
+== 自动微分
+
+=== 数值微分和符号微分的缺点
+
+==== 数值微分的缺点
+
+数值微分其实是有优点的，那就是写程序很容易实现。
+
+加入我们有一个$n$元函数$f(x_0, x_1, dots.c, x_(n-1))$，要对所有变量求偏导数，也就是梯度
+
+```python
+import copy
+
+def grad(f, x, i):
+    h = 1e-4
+    delta_x = copy.deepcopy(x)
+    delta_x[i] = x[i] + h
+    delta_y = f(delta_x) - f(x)
+    return delta_y / h
+
+# $f(x_0, x_1) = x_0^2 + x_1 ^ 3 + x_0 x_1$
+def f(x):
+    return x[0] ** 2 + x[1] ** 3 + x[0] * x[1]
+
+x = [1.1, 2.2]
+grad_f = [grad(f, x, 0), grad(f, x, 1)]
+print(grad_f)
+# 手动求解
+print([2 * x[0] + x[1], 3 * x[1] ** 2 + x[0]])
+```
+
+精度问题：
+
+受浮点数精度限制
+
+- 步长$h$太小 #sym.arrow 舍入误差（roundoff error）
+- 步长$h$太大 #sym.arrow 截断误差（truncation error）
+- 难以找到最优步长
+
+计算效率：
+
+- 需要多次函数求值
+- 对于$n$维函数，需要$O(n)$次函数调用
+- 高阶导数计算代价高
+
+数值不稳定：
+
+- 对病态函数（ill-conditioned）敏感
+- 可能产生数值噪声
+
+==== 符号微分的缺点
+
+例如我们对函数$f(x) = (x^2 - 1)/(x - 1)$进行求导
+
+```python
+import sympy as sp
+x = sp.Symbol("x")
+f_complex = (x ** 2 - 1) / (x - 1)
+f_derivative = sp.diff(f_complex, x)
+print(f_derivative)
+```
+
+使用上面的程序进行求导得到了如下
+
+$
+  f'(x) = (2x)/(x-1) - (x^2 - 1)/(x-1)^2
+$
+
+但是如果我们人类求导的话，会先观察出
+
+$
+  f(x) = (x^2 - 1)/(x - 1) = x + 1
+$
+
+所以
+
+$
+  f'(x) = 1
+$
+
+符号微分的缺点如下：
+
+- 表达式膨胀 (Expression Swell)：
+  - 导数表达式可能变得非常复杂
+  - 重复子表达式未被优化
+  - 内存消耗大
+- 计算效率低：
+  - 生成的表达式可能包含大量冗余计算
+  - 未经优化的符号表达式求值慢
+- 不适用于所有函数：
+  - 某些函数没有解析形式（如条件语句、循环）
+  - 无法处理数值算法（如迭代求解器）
+- 实现复杂：
+  - 需要复杂的符号操作系统
+  - 对于大型程序难以应用
+
+所以我们需要寻找其它自动微分的方法，那就是深度学习的核心算法：大名鼎鼎的*反向传播算法*。
+
+=== 反向传播算法
+
+
+
 == 数值优化
 
 === 凸函数
@@ -911,6 +1070,44 @@ $
 - 二阶条件
 
 黑塞矩阵$nabla^2 f(upright(bold(x)))$是*半正定矩阵*。
+
+== 概率论
+
+=== 概率
+
+==== 概率的概念
+
+概率是对事件发生的可能性的度量。通常将事件$A$的概率写作$P(A)$。
+
+==== 概率的计算
+
+#figure(
+  table(
+    columns: 2,
+    align: center,
+    [*事件*], [*概率*],
+    [$A$], [$P(A) in [0,1]$],
+    [非$A$], [$P(overline(A))=1-P(A)$],
+    [$A$和$B$ \ （联合概率）],
+    [$P(A inter B) = P(A, B) = P(A|B)P(B) = P(B|A)P(A)$ \ 当$A$和$B$相互独立时，$P(A inter B) = P(A) dot.c P(B)$],
+
+    [$A$或$B$], [$P(A union B) = P(A) + P(B) - P(A inter B)$ \ 当$A$和$B$互斥时，$P(A union B) = P(A) + P(B)$],
+    [$B$情况下$A$的概率 \ （条件概率$P(A|B)$）],
+    [$
+      P(A|B) = P(A inter B)/P(B) = (P(B|A)P(A))/(P(B))
+    $],
+  ),
+  caption: [概率的计算],
+)
+
+例如：现有一个装有10个球的袋子，其中有6个红球和4个蓝球。从中随机抽取两个球。我们定义以下事件：
+
+- 事件$A$：第一个抽到的是红球。
+- 事件$B$：两个抽到的球都是红球。
+
+
+
+== 信息论
 
 #chapter("一元线性回归", image: image("./orange2.jpg"), l: "dl-linear-regression")
 
