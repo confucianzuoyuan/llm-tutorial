@@ -370,9 +370,9 @@ $
   norm(bold(x))_p = (sum_(i=1)^m abs(x_i)^p)^(1/p) = (abs(x_1)^p + dots.c + abs(x_m)^p)^(1/p)
 $
 
-== 矩阵和张量
+=== 矩阵和张量
 
-=== 矩阵的概念
+==== 矩阵的概念
 
 一个$m times n$的矩阵（matrix）是一个有$m$行$n$列元素的矩形阵列，用$RR^(m times n)$表示所有$m times n$实数矩阵的向量空间。
 
@@ -398,7 +398,7 @@ $
   bold(I)_(3 times 3) = mat(1, 0, 0; 0, 1, 0; 0, 0, 1)
 $
 
-=== 矩阵转置
+==== 矩阵转置
 
 1. 矩阵转置运算
 
@@ -419,7 +419,7 @@ $
    (bold(A)bold(B))^T & = bold(B)^T bold(A)^T
 $
 
-=== 矩阵乘法
+==== 矩阵乘法
 
 1. 矩阵乘法运算
 
@@ -456,7 +456,7 @@ $
 - 左分配律：若$bold(A) in RR^(m times n), bold(B) in RR^(m times n), bold(C) in RR^(p times q)$，则$(bold(A)+bold(B))bold(C) = bold(A)bold(C) + bold(B)bold(C)$。
 - 右分配律：若$bold(A) in RR^(m times n), bold(B) in RR^(n times p), bold(C) in RR^(n times p)$，则$bold(A)(bold(B)+bold(C)) = bold(A)bold(B) + bold(A)bold(C)$。
 
-=== 矩阵的逆
+==== 矩阵的逆
 
 对于方阵$bold(A)$，如果存在另一个方阵$bold(A)^(-1)$，使得$bold(A)bold(A)^(-1)=bold(I)$成立，此时$bold(A)^(-1)bold(A)=bold(I)$也同样成立。称$bold(A)^(-1)$为$bold(A)$的逆矩阵。例如：
 
@@ -464,7 +464,7 @@ $
   bold(A)bold(A)^(-1) = mat(1, 2; 3, 5) dot.c mat(-5, 2, ; 3, -1) = mat(1 times (-5) + 2 times 3, 1 times 2 + 2 times (-1); 3 times (-5) + 3 times 5, 3 times 2 + 5 times (-1)) = mat(1, 0; 0, 1)=bold(I)
 $
 
-=== 矩阵的Hadamard积
+==== 矩阵的Hadamard积
 
 矩阵$bold(A) in RR^(m times n)$和矩阵$bold(B) in RR^(m times n)$的Hadamard积记作$bold(A) dot.o bold(B)$，它是两个矩阵对应元素的乘积，是一个$m times n$的矩阵。
 
@@ -472,7 +472,7 @@ $
   (bold(A) dot.o bold(B))_(i j) = a_(i j)b_(i j)
 $
 
-=== 张量（tensor）
+==== 张量（tensor）
 
 张量（tensor）可视为多维数组，是标量，$1$维向量和$2$维矩阵的$n$维推广。
 
@@ -480,6 +480,22 @@ $
 
 $
   mat(mat(1, 2; 3, 5; 4, 8), mat(3, 2; 1, 6; 7, 3), mat(5, 6; 9, 1; 2, 4))
+$
+
+==== 正定矩阵（Positive Definite Matrix）
+
+对于$n times n$实对称矩阵$upright(bold(A))$：
+
+$upright(bold(A))$是正定矩阵，如果对于所有非零向量$upright(bold(x)) in RR^n$，都有：
+
+$
+  upright(bold(x))^T upright(bold(A)) upright(bold(x)) > 0
+$
+
+$upright(bold(A))$是半正定矩阵，如果对于所有非零向量$upright(bold(x)) in RR^n$，都有：
+
+$
+  upright(bold(x))^T upright(bold(A)) upright(bold(x)) >= 0
 $
 
 == 微积分
@@ -562,6 +578,339 @@ $
 $
   f'(3) = 108 + 6cos(9) - e^3/3 - log(3)e^3
 $
+
+=== 偏导数和梯度
+
+==== 偏导数
+
+如果函数$f$的自变量并非单个元素，而是多个元素，例如：
+
+$
+  f(x, y) = x^2 + x y + y^2
+$
+
+我们可以绘制出函数的曲面图和等高线图
+
+#figure(
+  image("figures/surface-contour.svg"),
+  caption: [左图为曲面图，右图为等高线图],
+)
+
+可将其中一个元素$x$看作常数，此时$f$可看作关于另一元素$y$的函数。
+
+$
+  f_x (y) = x^2 + x y + y^2
+$
+
+在$x=a$固定的情况下，可计算$f_x$关于$y$的导数：
+
+$
+  f_(x=a) '(y) = a + 2y
+$
+
+这种导数称为#underline[偏导数]，一般记作：
+
+$
+  (partial f)/(partial y) (x,y) = x + 2y
+$
+
+更一般地来说，一个多元函数$f(x_1, x_2, dots.c, x_n)$在点$(a_1, a_2, dots.c, a_n)$处对$x_i$的偏导数定义为：
+
+$
+  (partial f)/(partial x_i) (a_1, a_2, dots.c, a_n) = lim_(Delta x_i arrow 0) (f(a_1, dots.c, a_i + Delta x_i, dots.c, a_n) - f(a_1, dots.c, a_i, dots.c, a_n))/(Delta x_i)
+$
+
+==== 方向导数
+
+偏导数可以看作是多元函数$f$沿某个自变量轴方向的变化率。
+
+如果我们任意选取一个方向$l$，那么在某个点$(x_0, y_0)$处，二元函数$f(x,y)$沿着这个方向的变化率可以用极限定义为：
+
+$
+  (partial f)/(partial l) (x_0, y_0) = lim_(Delta l arrow 0) (f(x_0 + Delta x, y_0 + Delta y) - f(x_0, y_0))/(Delta l)
+$
+
+这里，$Delta l$就是沿方向$l$的微小改变量，$Delta x$和$Delta y$与$Delta l$的关系为：
+
+$
+  Delta x & = Delta l dot.c cos alpha \
+  Delta y & = Delta l dot.c cos beta
+$
+
+#figure(
+  image("figures/directional-derivative.svg"),
+  caption: [方向导数],
+)
+
+根据全微分公式，上式可以表示为：
+
+$
+  (partial f)/(partial l) (x_0, y_0) = f_x (x_0, y_0) cos alpha + f_y (x_0, y_0) cos beta
+$
+
+其中$f_x (x_0, y_0), f_y (x_0, y_0)$表示点$(x_0, y_0)$处$f$对$x$、$y$的偏导数；$cos alpha, cos beta$是方向$l$的方向余弦，即$l$方向的单位方向向量可以表示为$bold(I)_0 = (cos alpha, cos beta)$。
+
+这个"沿某个方向的变化率"，就被称为$f(x, y)$沿方向$l$的#underline[方向导数]。
+
+==== 梯度（gradient）
+
+多元函数$f(x_1, dots.c, x_n)$关于每个变量$x_i$都有偏导数$(partial f)/(partial x_i)$，在点$a=(a_1, a_2, dots.c, a_n)$处，这些偏导数定义出一个向量：
+
+$
+  nabla f(a) = mat((partial f)/(partial x_1) (a), (partial f)/(partial x_2) (a), dots.c, (partial f)/(partial x_n) (a))
+$
+
+这个向量称为$f$在点$a$的#underline[梯度]，记作$nabla f(a)$或者$"grad"{f(a)}$。
+
+例如：$f(x,y) = x^2 + x y + y^2$在$(1,1)$处的梯度为$mat(3, 3)$。
+
+#figure(
+  image("figures/gradient.svg"),
+  caption: [梯度（gradient）],
+)
+
+梯度向量表示的方向，就是函数在这一点处，方向导数取最大值的方向。换句话说，梯度的方向，就是函数值变化最快的方向。
+
+== 矩阵微积分
+
+矩阵求导的本质就是#underline[*标量函数*]对变量的每个元素逐个求导，只是写成了向量、矩阵的形式。
+
+#danger(title: [注意！])[
+  只有#text(fill: red)[标量函数]对#text(fill: red)[标量变量]的导数具有现实意义，矩阵只是一种表示方法。所以向量对向量的求导，向量对矩阵的求导，矩阵对矩阵的求导等等，都必须从标量函数$cal(L)$开始进行计算，并针对每个标量变量进行求导，最后可以整理成矩阵形式！
+]
+
+=== 典型计算场景
+
+1. 标量函数$cal(L)=f(bold(x))$对向量$bold(x)$进行求导。
+
+假设有标量函数
+
+$
+  f(bold(x)) = f(x_1, x_2, dots.c, x_m)
+$
+
+如果我们将参数表示为列向量，那么有
+
+$
+  bold(x) = mat(x_1; x_2; dots.v; x_m)
+$
+
+则可以将偏导数表示成同样的形状
+
+$
+  (partial f(bold(x)))/(partial bold(x)) = mat((partial f)/(partial x_1); (partial f)/(partial x_2); dots.v; (partial f)/(partial x_m))
+$
+
+例如：
+
+函数$f(x_1, x_2) = x_1^2 + x_1 x_2 + 2x_2^2$，我们令
+
+$
+  bold(x) = mat(x_1; x_2)
+$
+
+那么有
+
+$
+  (partial f(bold(x)))/(partial bold(x)) = mat((partial f)/(partial x_1); (partial f)/(partial x_2)) = mat(2x_1 + x_2; x_1 + 4x_2)
+$
+
+2. 标量函数$cal(L)=f(bold(X))$对矩阵$bold(X)$求导
+
+其实和对向量求导原理相同，形状一样就可以了，毕竟只是矩阵表示而已。
+
+如果有函数$f$有$m times n$个参数，也就是
+
+$
+  f(bold(X)) = f(x_11, x_12, dots.c, x_(1 n), x_21, x_22, dots.c, x_(2 n), dots.c, x_(m 1), x_(m 2), dots.c, x_(m n))
+$
+
+参数如果写为矩阵形式，那么有如下
+
+$
+  bold(X) = mat(x_11, x_12, dots.c, x_(1 n); x_21, x_22, dots.c, x_(2 n); dots.v, dots.v, dots.down, dots.v; x_(m 1), x_(m 2), dots.c, x_(m n);)
+$
+
+那么对矩阵求导如下
+
+$
+  (partial f(bold(X)))/(partial bold(X)) = mat((partial f)/(partial x_11), (partial f)/(partial x_12), dots.c, (partial f)/(partial x_(1 n)); (partial f)/(partial x_21), (partial f)/(partial x_22), dots.c, (partial f)/(partial x_(2 n)); dots.v, dots.v, dots.down, dots.v; (partial f)/(partial x_(m 1)), (partial f)/(partial x_(m 2)), dots.c, (partial f)/(partial x_(m n));)
+$
+
+3. 向量函数$bold(f)(x)$对标量$x$进行求导。
+
+对于向量函数$bold(f)$可以写作
+
+$
+  bold(f) = mat(f_1 (x); f_2 (x); dots.v; f_p (x))
+$
+
+我们在矩阵微积分时，一定要从*标量函数*开始进行求导，因为向量对标量的求导并没有实际意义，但这里我们的函数是一个*向量*，怎么办呢？我们可以定义一个标量函数$cal(L)(bold(f))$，然后使用链式法则进行求导。
+
+这个标量函数$cal(L)$是什么无所谓，只要将$bold(f)(x)$转换成标量就可以。例如标量函数可以是
+
+$
+  cal(L)(x) = f_1 (x)^2 + f_2 (x)^2 + dots.c + f_p (x)^2
+$
+
+总之标量函数依赖于$f_1 (x), f_2 (x), dots.c$。所以可以使用全微分公式来进行推导
+
+$
+  (partial cal(L))/(partial x) & = (partial cal(L))/(partial f_1) dot.c (partial f_1)/(partial x) + (partial cal(L))/(partial f_2) dot.c (partial f_2)/(partial x) + dots.c + (partial cal(L))/(partial f_p) dot.c (partial f_p)/(partial x) \
+  & = mat((partial cal(L))/(partial f_1), (partial cal(L))/(partial f_2), dots.c, (partial cal(L))/(partial f_p)) dot.c mat((partial f_1)/(partial x); (partial f_2)/(partial x); dots.v; (partial f_p)/(partial x)) \
+  & = ((partial cal(L))/(partial bold(f)))^T dot.c mat((partial f_1)/(partial x); (partial f_2)/(partial x); dots.v; (partial f_p)/(partial x)) \
+  & = mat((partial f_1)/(partial x), (partial f_2)/(partial x), dots.c, (partial f_p)/(partial x)) dot.c (partial cal(L))/(partial bold(f))
+$
+
+从式子中可以看出，$(partial bold(f))/(partial x)$的形状依赖于$(partial cal(L))/(partial x)$的计算方式。
+
+4. 向量函数$bold(f)(bold(x))$对向量$bold(x)$进行求导。
+
+其中
+
+$
+  bold(f)(bold(x)) & = mat(f_1 (bold(x)); f_2 (bold(x)); dots.v; f_p (bold(x))) \
+           bold(x) & = mat(x_1; x_2; dots.v; x_m) \
+$
+
+我们还是需要从标量函数$cal(L)$开始进行求导
+
+举个例子：
+
+$
+  (partial cal(L))/(partial x_1) & = (partial cal(L))/(partial f_1) dot.c (partial f_1)/(partial x_1) + (partial cal(L))/(partial f_2) dot.c (partial f_2)/(partial x_1) + dots.c + (partial cal(L))/(partial f_p) dot.c (partial f_p)/(partial x_1) \
+  & = mat((partial cal(L))/(partial f_1), (partial cal(L))/(partial f_2), dots.c, (partial cal(L))/(partial f_p)) dot.c mat((partial f_1)/(partial x_1), (partial f_2)/(partial x_1), dots.c, (partial f_p)/(partial x_1))^T \
+  & = ((partial cal(L))/(partial bold(f)))^T dot.c mat((partial f_1)/(partial x_1), (partial f_2)/(partial x_1), dots.c, (partial f_p)/(partial x_1))^T
+$
+
+同理我们有
+
+$
+  (partial cal(L))/(partial x_2) = ((partial cal(L))/(partial bold(f)))^T dot.c mat((partial f_1)/(partial x_2), (partial f_2)/(partial x_2), dots.c, (partial f_p)/(partial x_2))^T
+$
+
+那么我们可以整理成矩阵形式
+
+$
+  (partial cal(L))/(partial bold(x)) & = mat((partial cal(L))/(partial x_1); (partial cal(L))/(partial x_2); dots.v; (partial cal(L))/(partial x_m)) = mat((partial cal(L))/(partial f_1), (partial cal(L))/(partial f_2), dots.c, (partial cal(L))/(partial f_p)) dot.c mat((partial f_1)/(partial x_1), (partial f_2)/(partial x_1), dots.c, (partial f_p)/(partial x_1); (partial f_1)/(partial x_2), (partial f_2)/(partial x_2), dots.c, (partial f_p)/(partial x_2); dots.v, dots.v, dots.down, dots.v; (partial f_1)/(partial x_m), (partial f_2)/(partial x_m), dots.c, (partial f_p)/(partial x_m))^T \
+  & = ((partial cal(L))/(partial bold(f)))^T dot.c mat((partial f_1)/(partial x_1), (partial f_1)/(partial x_2), dots.c, (partial f_1)/(partial x_m); (partial f_2)/(partial x_1), (partial f_2)/(partial x_2), dots.c, (partial f_2)/(partial x_m); dots.v, dots.v, dots.down, dots.v; (partial f_p)/(partial x_1), (partial f_p)/(partial x_2), dots.c, (partial f_p)/(partial x_m))
+$
+
+举个例子
+
+$
+  bold(f)(bold(x)_(m times 1))_(p times 1) = bold(W)_(p times m) bold(x)_(m times 1)
+$
+
+其中
+
+$
+                f_1 (bold(x)) & = w_11 x_1 + w_12 x_2 + dots.c + w_(1 m) x_m \
+                f_2 (bold(x)) & = w_21 x_1 + w_22 x_2 + dots.c + w_(2 m) x_m \
+  (partial f_1)/(partial x_1) & = w_11 \
+  (partial f_2)/(partial x_1) & = w_21 \
+$
+
+通过观察可以得到
+
+$
+  (partial cal(L))/(partial bold(x)) & = ((partial cal(L))/(partial bold(f)))^T dot.c mat(w_11, w_12, dots.c, w_(1 m); w_21, w_22, dots.c, w_(2 m); dots.v, dots.v, dots.down, dots.v; w_(p 1), w_(p 2), dots.c, w_(p m)) \
+  & = ((partial cal(L))/(partial bold(f)))^T dot.c bold(W) \
+  & = bold(W)^T dot.c (partial cal(L))/(partial bold(f))
+$
+
+所以标量函数$cal(L)$对$bold(x)$的梯度为：$(partial cal(L))/(partial bold(f))$的转置*左乘*矩阵$bold(W)$。或者矩阵$bold(W)$的转置左乘$(partial cal(L))/(partial bold(f))$。
+
+=== 黑塞矩阵（Hessian Matrix）
+
+对于二阶可微的标量函数$f: RR^n arrow RR$，黑塞矩阵（Hessian Matrix） 是由所有二阶偏导数组成的$n times n$方阵：
+
+$
+  nabla^2 f(bold(x)) = upright(bold(H))_f (bold(x)) = mat((partial^2 f)/(partial x_1^2), (partial^2 f)/(partial x_1 partial x_2), dots.c, (partial^2 f)/(partial x_1 partial x_n); (partial^2 f)/(partial x_2 partial x_1), (partial^2 f)/(partial x_2^2), dots.c, (partial^2 f)/(partial x_2 partial x_n); dots.v, dots.v, dots.down, dots.v; (partial^2 f)/(partial x_n partial x_1), (partial^2 f)/(partial x_n partial x_2), dots.c, (partial^2 f)/(partial x_n^2))
+$
+
+简单记作
+
+$
+  upright(bold(H))_(i j) = (partial^2 f)/(partial x_i partial x_j)
+$
+
+== 数值优化
+
+=== 凸函数
+
+先从一元凸函数开始讨论。
+
+函数$f: RR arrow RR$称为凸函数（convex function），如果对于定义域内的任意两点$x, y$和任意$lambda in [0,1]$，都有：
+
+$
+  f(lambda x + (1-lambda) y) <= lambda f(x) + (1-lambda) f(y)
+$
+
+*几何意义*：连接函数图像上任意两点的线段，位于函数图像的上方或与之重合。
+
+当$lambda != 0 且 lambda != 1$，也就是$lambda in (0,1)$且$x != y$时，不等号严格成立
+
+$
+  f(lambda x + (1-lambda) y) < lambda f(x) + (1-lambda) f(y)
+$
+
+则称$f$为*严格凸函数*（strictly convex function）。
+
+如果不等号方向相反，则$f$为*凹函数*
+
+$
+  f(lambda x + (1-lambda) y) >= lambda f(x) + (1-lambda) f(y)
+$
+
+既不是凸函数也不是凹函数的，叫做*非凸函数*。
+
+#figure(
+  image("figures/convex-functions.svg"),
+  caption: [凸函数，凹函数等],
+)
+
+凸函数的重要性质：局部最小值=全局最小值
+
+判定凸函数的条件：
+
+我们先来看一下一元凸函数
+
+- 一阶条件
+
+对于可微函数，$f$是凸函数当且仅当
+
+$
+  f(y) >= f(x) + f'(x)(y-x), forall x, y in RR
+$
+
+- 二阶条件
+
+对于二阶可微函数，$f$是凸函数 当且仅当：
+
+$
+  f''(x) >= 0, forall x in RR
+$
+
+上面两个条件，满足一个，就可以判定函数是凸函数。
+
+多元凸函数和一元凸函数很类似
+
+函数$f: RR^n arrow RR$称为凸函数（convex function），如果对于定义域内的任意两点$upright(bold(x)), upright(bold(y))$和任意$lambda in [0, 1]$，都有：
+
+$
+  f(lambda upright(bold(x)) + (1-lambda)upright(bold(y))) <= lambda f(upright(bold(x))) + (1-lambda)f(upright(bold(y)))
+$
+
+- 一阶条件
+
+$
+  f(upright(bold(y))) >= f(upright(bold(x))) + nabla f(upright(bold(x)))^T (upright(bold(y))-upright(bold(x)))
+$
+
+- 二阶条件
+
+黑塞矩阵$nabla^2 f(upright(bold(x)))$是*半正定矩阵*。
 
 #chapter("一元线性回归", image: image("./orange2.jpg"), l: "dl-linear-regression")
 
