@@ -736,147 +736,191 @@ $
   只有#text(fill: red)[标量函数]对#text(fill: red)[标量变量]的导数具有现实意义，矩阵只是一种表示方法。所以向量对向量的求导，向量对矩阵的求导，矩阵对矩阵的求导等等，都必须从标量函数$cal(L)$开始进行计算，并针对每个标量变量进行求导，最后可以整理成矩阵形式！
 ]
 
-=== 典型计算场景
+=== 线性变换的求导
 
-1. 标量函数$cal(L)=f(bold(x))$对向量$bold(x)$进行求导。
-
-假设有标量函数
+线性变换的定义为
 
 $
-  f(bold(x)) = f(x_1, x_2, dots.c, x_m)
+  upright(bold(Y))_(m times p) = upright(bold(W))_(m times n) upright(bold(X))_(n times p) + upright(bold(b))_(m times 1)
 $
 
-如果我们将参数表示为列向量，那么有
+其中$b_(m times 1)$会被广播为形状$m times p$。
+
+例如
 
 $
-  bold(x) = mat(x_1; x_2; dots.v; x_m)
+  Y & = mat(1, 2; 3, 4) dot.c mat(1, 2; 3, 4) + mat(2; 1) \
+    & = mat(7, 10; 15, 22) + underbrace(mat(2, 2; 1, 1), "广播以后") \
+    & = mat(9, 12; 16, 23)
 $
 
-则可以将偏导数表示成同样的形状
+现在我们思考一个问题
 
 $
-  (partial f(bold(x)))/(partial bold(x)) = mat((partial f)/(partial x_1); (partial f)/(partial x_2); dots.v; (partial f)/(partial x_m))
+  (partial upright(bold(Y)))/(partial upright(bold(W))) & = ? \
+  (partial upright(bold(Y)))/(partial upright(bold(X))) & = ? \
+  (partial upright(bold(Y)))/(partial upright(bold(b))) & = ? \
 $
 
-例如：
-
-函数$f(x_1, x_2) = x_1^2 + x_1 x_2 + 2x_2^2$，我们令
+我们知道矩阵对矩阵求导没有实际意义，必须从标量函数开始求导。所以我们需要一个标量函数，也就是
 
 $
-  bold(x) = mat(x_1; x_2)
+  cal(L)(upright(bold(Y))) = cal(L)(upright(bold(W))_(m times n) upright(bold(X))_(n times p) + upright(bold(b))_(m times 1))
 $
 
-那么有
+标量对矩阵求导，就是对矩阵的每个元素求偏导数后组成的矩阵。
 
 $
-  (partial f(bold(x)))/(partial bold(x)) = mat((partial f)/(partial x_1); (partial f)/(partial x_2)) = mat(2x_1 + x_2; x_1 + 4x_2)
+  (partial cal(L))/(partial upright(bold(W))) & = mat((partial cal(L))/(partial w_11), (partial cal(L))/(partial w_12), dots.c, (partial cal(L))/(partial w_(1n)); (partial cal(L))/(partial w_21), (partial cal(L))/(partial w_22), dots.c, (partial cal(L))/(partial w_(2n)); dots.v, dots.v, dots.down, dots.v; (partial cal(L))/(partial w_(m 1)), (partial cal(L))/(partial w_(m 2)), dots.c, (partial cal(L))/(partial w_(m n));) \
+  (partial cal(L))/(partial upright(bold(X))) & = mat((partial cal(L))/(partial x_11), (partial cal(L))/(partial x_12), dots.c, (partial cal(L))/(partial x_(1 p)); (partial cal(L))/(partial x_21), (partial cal(L))/(partial x_22), dots.c, (partial cal(L))/(partial x_(2p)); dots.v, dots.v, dots.down, dots.v; (partial cal(L))/(partial x_(n 1)), (partial cal(L))/(partial x_(n 2)), dots.c, (partial cal(L))/(partial x_(n p));) \
+  (partial cal(L))/(partial upright(bold(b))) & = mat((partial cal(L))/(partial b_1); (partial cal(L))/(partial b_2); dots.v; (partial cal(L))/(partial b_m)) \
 $
 
-2. 标量函数$cal(L)=f(bold(X))$对矩阵$bold(X)$求导
-
-其实和对向量求导原理相同，形状一样就可以了，毕竟只是矩阵表示而已。
-
-如果有函数$f$有$m times n$个参数，也就是
+我们通过一个简单的例子就能看出计算过程，设置$m = n = p = 2$。那么有如下
 
 $
-  f(bold(X)) = f(x_11, x_12, dots.c, x_(1 n), x_21, x_22, dots.c, x_(2 n), dots.c, x_(m 1), x_(m 2), dots.c, x_(m n))
+  upright(bold(W)) & = mat(w_11, w_12; w_21, w_22) \
+  upright(bold(X)) & = mat(x_11, x_12; x_21, x_22) \
+  upright(bold(b)) & = mat(b_1; b_2) \
 $
 
-参数如果写为矩阵形式，那么有如下
+所以有
 
 $
-  bold(X) = mat(x_11, x_12, dots.c, x_(1 n); x_21, x_22, dots.c, x_(2 n); dots.v, dots.v, dots.down, dots.v; x_(m 1), x_(m 2), dots.c, x_(m n);)
+  upright(bold(Y)) = mat(y_11, y_12; y_21, y_22) = mat(w_11 x_11 + w_12 x_21 + b_1, w_11 x_12 + w_12 x_22 + b_1; w_21 x_11 + w_22 x_21 + b_2, w_21 x_12 + w_22 x_22 + b_2)
 $
 
-那么对矩阵求导如下
+那么有如下推导过程
 
 $
-  (partial f(bold(X)))/(partial bold(X)) = mat((partial f)/(partial x_11), (partial f)/(partial x_12), dots.c, (partial f)/(partial x_(1 n)); (partial f)/(partial x_21), (partial f)/(partial x_22), dots.c, (partial f)/(partial x_(2 n)); dots.v, dots.v, dots.down, dots.v; (partial f)/(partial x_(m 1)), (partial f)/(partial x_(m 2)), dots.c, (partial f)/(partial x_(m n));)
+  (partial cal(L))/(partial w_11) & = (partial cal(L))/(partial y_11) dot.c (partial y_11)/(partial w_11) + (partial cal(L))/(partial y_12) dot.c (partial y_12)/(partial w_11) + cancel((partial cal(L))/(partial y_21) dot.c (partial y_21)/(partial w_11)) + cancel((partial cal(L))/(partial y_22) dot.c (partial y_22)/(partial w_11)) \
+  & = (partial cal(L))/(partial y_11) dot.c x_11 + (partial cal(L))/(partial y_12) dot.c x_12
 $
 
-3. 向量函数$bold(f)(x)$对标量$x$进行求导。
-
-对于向量函数$bold(f)$可以写作
+同理有
 
 $
-  bold(f) = mat(f_1 (x); f_2 (x); dots.v; f_p (x))
+  (partial cal(L))/(partial w_12) & = (partial cal(L))/(partial y_11) dot.c x_21 + (partial cal(L))/(partial y_12) dot.c x_22 \
+  (partial cal(L))/(partial w_21) & = (partial cal(L))/(partial y_21) dot.c x_11 + (partial cal(L))/(partial y_22) dot.c x_12 \
+  (partial cal(L))/(partial w_22) & = (partial cal(L))/(partial y_21) dot.c x_21 + (partial cal(L))/(partial y_22) dot.c x_22 \
 $
 
-我们在矩阵微积分时，一定要从*标量函数*开始进行求导，因为向量对标量的求导并没有实际意义，但这里我们的函数是一个*向量*，怎么办呢？我们可以定义一个标量函数$cal(L)(bold(f))$，然后使用链式法则进行求导。
-
-这个标量函数$cal(L)$是什么无所谓，只要将$bold(f)(x)$转换成标量就可以。例如标量函数可以是
+整理成矩阵形式如下：
 
 $
-  cal(L)(x) = f_1 (x)^2 + f_2 (x)^2 + dots.c + f_p (x)^2
+  (partial cal(L))/(partial upright(bold(W))) & = mat((partial cal(L))/(partial w_11), (partial cal(L))/(partial w_12); (partial cal(L))/(partial w_21), (partial cal(L))/(partial w_22)) \
+  & = mat((partial cal(L))/(partial y_11), (partial cal(L))/(partial y_12); (partial cal(L))/(partial y_21), (partial cal(L))/(partial y_22)) dot.c mat(x_11, x_21; x_12, x_22) \
+  & = (partial cal(L))/(partial upright(bold(Y))) dot.c upright(bold(X))^T \
+  & = upright(bold(X)) dot.c ((partial cal(L))/(partial upright(bold(Y))))^T
 $
 
-总之标量函数依赖于$f_1 (x), f_2 (x), dots.c$。所以可以使用全微分公式来进行推导
+可以看到，$(partial upright(bold(Y)))/(partial upright(bold(W)))$具体定义为$upright(bold(X))$还是$upright(bold(X))^T$取决于上游的梯度过来时，是左乘还是右乘。也就是说，矩阵求导无法脱离上游的梯度而单独存在。
+
+重复以上过程，可以得到如下
 
 $
-  (partial cal(L))/(partial x) & = (partial cal(L))/(partial f_1) dot.c (partial f_1)/(partial x) + (partial cal(L))/(partial f_2) dot.c (partial f_2)/(partial x) + dots.c + (partial cal(L))/(partial f_p) dot.c (partial f_p)/(partial x) \
-  & = mat((partial cal(L))/(partial f_1), (partial cal(L))/(partial f_2), dots.c, (partial cal(L))/(partial f_p)) dot.c mat((partial f_1)/(partial x); (partial f_2)/(partial x); dots.v; (partial f_p)/(partial x)) \
-  & = ((partial cal(L))/(partial bold(f)))^T dot.c mat((partial f_1)/(partial x); (partial f_2)/(partial x); dots.v; (partial f_p)/(partial x)) \
-  & = mat((partial f_1)/(partial x), (partial f_2)/(partial x), dots.c, (partial f_p)/(partial x)) dot.c (partial cal(L))/(partial bold(f))
+  (partial cal(L))/(partial x_11) & = (partial cal(L))/(partial y_11) dot.c w_11 + (partial cal(L))/(partial y_21) dot.c w_21 \
+  (partial cal(L))/(partial x_12) & = (partial cal(L))/(partial y_12) dot.c w_11 + (partial cal(L))/(partial y_22) dot.c w_21 \
+  (partial cal(L))/(partial x_21) & = (partial cal(L))/(partial y_11) dot.c w_12 + (partial cal(L))/(partial y_21) dot.c w_22 \
+  (partial cal(L))/(partial x_22) & = (partial cal(L))/(partial y_12) dot.c w_12 + (partial cal(L))/(partial y_22) dot.c w_22 \
 $
 
-从式子中可以看出，$(partial bold(f))/(partial x)$的形状依赖于$(partial cal(L))/(partial x)$的计算方式。
-
-4. 向量函数$bold(f)(bold(x))$对向量$bold(x)$进行求导。
-
-其中
+整理成矩阵形式：
 
 $
-  bold(f)(bold(x)) & = mat(f_1 (bold(x)); f_2 (bold(x)); dots.v; f_p (bold(x))) \
-           bold(x) & = mat(x_1; x_2; dots.v; x_m) \
+  (partial cal(L))/(partial upright(bold(X))) & = mat((partial cal(L))/(partial x_11), (partial cal(L))/(partial x_12); (partial cal(L))/(partial x_21), (partial cal(L))/(partial x_22)) \
+  & = mat(w_11, w_21; w_12, w_22) dot.c mat((partial cal(L))/(partial y_11), (partial cal(L))/(partial y_12); (partial cal(L))/(partial y_21), (partial cal(L))/(partial y_22)) \
+  & = upright(bold(W))^T dot.c (partial cal(L))/(partial upright(bold(Y))) \
+  & = ((partial cal(L))/(partial upright(bold(Y))))^T dot.c upright(bold(W))
 $
 
-我们还是需要从标量函数$cal(L)$开始进行求导
-
-举个例子：
+由于$upright(bold(b))$在加法运算时，会进行广播。所以我们需要看一下，当然原理还是全微分公式。
 
 $
-  (partial cal(L))/(partial x_1) & = (partial cal(L))/(partial f_1) dot.c (partial f_1)/(partial x_1) + (partial cal(L))/(partial f_2) dot.c (partial f_2)/(partial x_1) + dots.c + (partial cal(L))/(partial f_p) dot.c (partial f_p)/(partial x_1) \
-  & = mat((partial cal(L))/(partial f_1), (partial cal(L))/(partial f_2), dots.c, (partial cal(L))/(partial f_p)) dot.c mat((partial f_1)/(partial x_1), (partial f_2)/(partial x_1), dots.c, (partial f_p)/(partial x_1))^T \
-  & = ((partial cal(L))/(partial bold(f)))^T dot.c mat((partial f_1)/(partial x_1), (partial f_2)/(partial x_1), dots.c, (partial f_p)/(partial x_1))^T
+  (partial cal(L))/(partial b_1) & = (partial cal(L))/(partial y_11) dot.c (partial y_11)/(partial b_1) + (partial cal(L))/(partial y_12) dot.c (partial y_12)/(partial b_1) \
+  & = (partial cal(L))/(partial y_11) + (partial cal(L))/(partial y_12) \
+  (partial cal(L))/(partial b_2) & = (partial cal(L))/(partial y_21) + (partial cal(L))/(partial y_22)
 $
 
-同理我们有
+所以整理成矩阵形式
 
 $
-  (partial cal(L))/(partial x_2) = ((partial cal(L))/(partial bold(f)))^T dot.c mat((partial f_1)/(partial x_2), (partial f_2)/(partial x_2), dots.c, (partial f_p)/(partial x_2))^T
+  (partial cal(L))/(partial upright(bold(b))) = mat((partial cal(L))/(partial b_1); (partial cal(L))/(partial b_2)) = mat((partial cal(L))/(partial y_11) + (partial cal(L))/(partial y_12); (partial cal(L))/(partial y_21) + (partial cal(L))/(partial y_22))
 $
 
-那么我们可以整理成矩阵形式
+也就是
 
 $
-  (partial cal(L))/(partial bold(x)) & = mat((partial cal(L))/(partial x_1); (partial cal(L))/(partial x_2); dots.v; (partial cal(L))/(partial x_m)) = mat((partial cal(L))/(partial f_1), (partial cal(L))/(partial f_2), dots.c, (partial cal(L))/(partial f_p)) dot.c mat((partial f_1)/(partial x_1), (partial f_2)/(partial x_1), dots.c, (partial f_p)/(partial x_1); (partial f_1)/(partial x_2), (partial f_2)/(partial x_2), dots.c, (partial f_p)/(partial x_2); dots.v, dots.v, dots.down, dots.v; (partial f_1)/(partial x_m), (partial f_2)/(partial x_m), dots.c, (partial f_p)/(partial x_m))^T \
-  & = ((partial cal(L))/(partial bold(f)))^T dot.c mat((partial f_1)/(partial x_1), (partial f_1)/(partial x_2), dots.c, (partial f_1)/(partial x_m); (partial f_2)/(partial x_1), (partial f_2)/(partial x_2), dots.c, (partial f_2)/(partial x_m); dots.v, dots.v, dots.down, dots.v; (partial f_p)/(partial x_1), (partial f_p)/(partial x_2), dots.c, (partial f_p)/(partial x_m))
+  (partial cal(L))/(partial upright(bold(b))) = "np.sum"((partial cal(L))/(partial upright(bold(Y))), "axis"=1, "keepdims=True")
 $
 
-举个例子
+我们来个复杂一点的，也就是线性变换的复合的求导。
 
 $
-  bold(f)(bold(x)_(m times 1))_(p times 1) = bold(W)_(p times m) bold(x)_(m times 1)
+  upright(bold(Y)) = upright(bold(W))'(upright(bold(W))upright(bold(X)) + upright(bold(b))) + upright(bold(b))'
 $
 
-其中
+其中：
+
+- $upright(bold(X)) in RR^(n times p)$（输入）
+- $upright(bold(W)) in RR^(m times n)$（内层线性变换的权重）
+- $upright(bold(b)) in RR^(m times 1)$（内层线性变换的偏置）
+- $upright(bold(W))' in RR^(k times m)$（外层线性变换的权重）
+- $upright(bold(b))' in RR^(k times 1)$（外层线性变换的偏置）
+- $upright(bold(Y)) in RR^(k times p)$（输出）
+
+求$(partial cal(L))/(partial upright(bold(X)))=?$
+
+我们使用链式求导法则，所以引入中间变量，有如下：
 
 $
-                f_1 (bold(x)) & = w_11 x_1 + w_12 x_2 + dots.c + w_(1 m) x_m \
-                f_2 (bold(x)) & = w_21 x_1 + w_22 x_2 + dots.c + w_(2 m) x_m \
-  (partial f_1)/(partial x_1) & = w_11 \
-  (partial f_2)/(partial x_1) & = w_21 \
+  upright(bold(Z)) & = upright(bold(W))upright(bold(X)) + upright(bold(b)) \
+  upright(bold(Y)) & = upright(bold(W))'upright(bold(Z)) + upright(bold(b))'
 $
 
-通过观察可以得到
+应用链式求导法则
+
+- 步骤1：
 
 $
-  (partial cal(L))/(partial bold(x)) & = ((partial cal(L))/(partial bold(f)))^T dot.c mat(w_11, w_12, dots.c, w_(1 m); w_21, w_22, dots.c, w_(2 m); dots.v, dots.v, dots.down, dots.v; w_(p 1), w_(p 2), dots.c, w_(p m)) \
-  & = ((partial cal(L))/(partial bold(f)))^T dot.c bold(W) \
-  & = bold(W)^T dot.c (partial cal(L))/(partial bold(f))
+  (partial cal(L))/(partial upright(bold(Z))) = (upright(bold(W))')^T dot.c (partial cal(L))/(partial upright(bold(Y)))
 $
 
-所以标量函数$cal(L)$对$bold(x)$的梯度为：$(partial cal(L))/(partial bold(f))$的转置*左乘*矩阵$bold(W)$。或者矩阵$bold(W)$的转置左乘$(partial cal(L))/(partial bold(f))$。
+- 步骤2：
+
+$
+  (partial cal(L))/(partial upright(bold(X))) = upright(bold(W))^T dot.c (partial cal(L))/(partial upright(bold(Z)))
+$
+
+组合一下结果
+
+$
+  (partial cal(L))/(partial upright(bold(X))) & = upright(bold(W))^T dot.c [(upright(bold(W))')^T dot.c (partial cal(L))/(partial upright(bold(Y)))] \
+  & = upright(bold(W))^T (upright(bold(W))')^T (partial cal(L))/(partial upright(bold(Y))) \
+  & = ((partial cal(L))/(partial upright(bold(Y))))^T upright(bold(W))' upright(bold(W))
+$
+
+求$(partial cal(L))/(partial upright(bold(W)))=?$
+
+还是应用链式法则
+
+$
+  (partial cal(L))/(partial upright(bold(Z))) & = (upright(bold(W))')^T dot.c (partial cal(L))/(partial upright(bold(Y))) \
+  (partial cal(L))/(partial upright(bold(W))) & = (partial cal(L))/(partial upright(bold(Z))) dot.c upright(bold(X))^T
+$
+
+所以结果是
+
+$
+  (partial cal(L))/(partial upright(bold(W))) & = [(upright(bold(W))')^T dot.c (partial cal(L))/(partial upright(bold(Y)))] dot.c upright(bold(X))^T \
+  & = ((partial cal(L))/(partial upright(bold(Y))))^T upright(bold(W))' dot.c upright(bold(X))
+$
+
+求$(partial cal(L))/(partial upright(bold(b)))=?$
+
+$
+  (partial cal(L))/(partial upright(bold(b))) = "np.sum"((partial cal(L))/(partial upright(bold(Z))), "axis=1", "keepdims=True")
+$
 
 === 黑塞矩阵（Hessian Matrix）
 

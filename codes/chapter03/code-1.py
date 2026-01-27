@@ -82,10 +82,10 @@ def back_prop(z1, a1, z2, a2, w2, Y, X):
     OneHot_Y = one_hot(Y)
     dZ2 = a2-OneHot_Y
     dW2 = 1/m * dZ2.dot(a1.T)
-    db2 = 1/m * np.sum(dZ2)
+    db2 = 1/m * np.sum(dZ2, axis=1, keepdims=True)
     dZ1 = w2.T.dot(dZ2)*deriv_ReLU(z1)
     dW1 = 1/m * dZ1.dot(X.T)
-    db1 = 1/m * np.sum(dZ1)
+    db1 = 1/m * np.sum(dZ1, axis=1, keepdims=True)
     return dW1, db1, dW2, db2
 
 
