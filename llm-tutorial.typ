@@ -977,7 +977,50 @@ $
   (partial cal(L))/(partial upright(bold(X))) = ((partial cal(L))/(partial upright(bold(Y))))^T
 $
 
+=== 矩阵Reshape的求导
 
+和转置基本一样
+
+$
+  upright(bold(Y)) = "reshape"(upright(bold(X)), "new_shape")
+$
+
+导数如下
+
+$
+  (partial cal(L))/(partial upright(bold(X))) = "reshape"((partial cal(L))/(partial upright(bold(Y))), "shape"(upright(bold(X))))
+$
+
+举个例子
+
+$
+  upright(bold(X)) & = mat(x_1; x_2; x_3; x_4) in RR^(4 times 1) \
+  upright(bold(Y)) & = "reshape"(upright(bold(X)), (2,2)) = mat(x_1, x_2; x_3, x_4) in RR^(2 times 2)
+$
+
+元素对应关系
+
+$
+  y_11 & = x_1 \
+  y_12 & = x_2 \
+  y_21 & = x_3 \
+  y_22 & = x_4 \
+$
+
+求导得到
+
+$
+  (partial cal(L))/(partial x_1) & = (partial cal(L))/(partial y_11) \
+  (partial cal(L))/(partial x_2) & = (partial cal(L))/(partial y_12) \
+  (partial cal(L))/(partial x_3) & = (partial cal(L))/(partial y_21) \
+  (partial cal(L))/(partial x_4) & = (partial cal(L))/(partial y_22) \
+$
+
+所以有如下
+
+$
+  (partial cal(L))/(partial upright(bold(X))) = mat((partial cal(L))/(partial y_11); (partial cal(L))/(partial y_12); (partial cal(L))/(partial y_21); (partial cal(L))/(partial y_22)) = "reshape"((partial cal(L))/(partial upright(bold(Y))), (4,1))
+$
 
 === 黑塞矩阵（Hessian Matrix）
 
