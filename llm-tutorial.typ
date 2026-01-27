@@ -1212,7 +1212,7 @@ $
 
 我们注意到一阶导数在$x=0$和$x=1.5$处为$0$，这些位置是函数极值点（极小值或极大值）的候选点——该处斜率为零。但首先需要验证二阶导数的情况。
 
-在$x=0$和$x=1$处，二阶导数的值为$0$。这些位置被称为拐点——即曲率改变符号的地方——意味着函数从凸变为凹，或反之亦然。通过分析这个方程，我们得出以下结论：
+在$x=0$和$x=1$处，二阶导数的值为$0$。这些位置被称为#underline[*拐点*]——即曲率改变符号的地方——意味着函数从凸变为凹，或反之亦然。通过分析这个方程，我们得出以下结论：
 
 - 当$x<0$时：函数是凸的
 - 当$0<x<1$时：函数是凹的（二阶导数$<0$）
@@ -1227,7 +1227,7 @@ $
   caption: [具有鞍点的半凸（semi-convex）函数],
 )
 
-对于多变量函数，判断某点是否为鞍点的最合适方法是计算 Hessian 矩阵，我们后面再讲。
+对于多变量函数，判断某点是否为鞍点的最合适方法是计算Hessian矩阵。
 
 一个双变量函数$z=x^2-y^2$的鞍点的示例如下图所示。
 
@@ -1248,7 +1248,7 @@ $
   nabla f(p) = mat((partial f)/(partial x_1)(p); dots.v; (partial f)/(partial x_n)(p))
 $
 
-倒三角形$nabla$就是所谓的nabla符号，读作"del"。为了更好地理解如何计算梯度，让我们为下面这个二维示例函数$f(x)=0.5x^2+y^2$进行手动计算。
+倒三角形$nabla$就是所谓的"nabla"符号。为了更好地理解如何计算梯度，让我们为下面这个二维示例函数$f(x)=0.5x^2+y^2$进行手动计算。
 
 #figure(
   image("figures/3d-image.svg"),
@@ -1309,8 +1309,13 @@ $
 import numpy as np
 from typing import Callable
 
-def gradient_descent(start: float, gradient: Callable[[float], float],
-                     learn_rate: float, max_iter: int, tol: float = 0.01):
+def gradient_descent(
+    start: float, # 起始点
+    gradient: Callable[[float], float], # 计算梯度的函数
+    learn_rate: float, # 学习率$eta$
+    max_iter: int, # 最大迭代次数
+    tol: float = 0.01 # 步长的阈值
+):
     x = start
     steps = [start]  # 历史跟踪
 
@@ -1326,11 +1331,11 @@ def gradient_descent(start: float, gradient: Callable[[float], float],
 
 这个函数接收5个参数：
 
-1. *起始点*[`float`]——我们这里手动定义了起始点，但在实践中，起始点通常是随机初始化的。
-2. *梯度函数*[`object`]——计算梯度的函数（需要实现定义好然后传给上面的函数）
-3. *学习率*[`float`]——步长的缩放因子
-4. *最大迭代次数*[`int`]
-5. *阈值*[`float`]——算法停止的一个条件（这里默认是0.01）
+1. *起始点*——我们这里手动定义了起始点，但在实践中，起始点通常是#underline[*随机初始化*]的。
+2. *梯度函数*——计算梯度的函数（需要实现定义好然后传给上面的函数）
+3. *学习率*——步长的缩放因子
+4. *最大迭代次数*——循环次数
+5. *阈值*——算法停止的一个条件（这里默认是0.01）
 
 ==== 示例1——二次函数
 
@@ -1385,6 +1390,16 @@ history, result = gradient_descent(9, gradient_func1, 0.1, 100)
 $
   f(x) = x^4 - 2x^3 + 2
 $
+
+写成代码如下：
+
+```python
+def func2(x: float):
+    return x ** 4 - 2 * x ** 3 + 2
+
+def gradient_func2(x: float):
+    return 4 * x ** 3 - 6 * x
+```
 
 下方展示了两种学习率与两种不同起始点的运算结果。
 
