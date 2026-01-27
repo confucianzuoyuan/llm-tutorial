@@ -922,6 +922,63 @@ $
   (partial cal(L))/(partial upright(bold(b))) = "np.sum"((partial cal(L))/(partial upright(bold(Z))), "axis=1", "keepdims=True")
 $
 
+=== 矩阵的逐点运算以及导数
+
+逐点运算的例子
+
+$
+  upright(bold(Y)) & = "ReLU"(upright(bold(X))) = "ReLU"(mat(x_11, x_12; x_21, x_22)) = mat("ReLU"(x_11), "ReLU"(x_12); "ReLU"(x_21), "ReLU"(x_22)) \
+  & = mat(max(x_11, 0), max(x_12, 0); max(x_21, 0), max(x_22, 0))
+$
+
+此时$(partial upright(bold(Y)))/(partial upright(bold(X)))=?$
+
+我们还是从标量函数$cal(L)$开始求导数
+
+$
+  (partial cal(L))/(partial x_11) = (partial cal(L))/(partial y_11) dot.c (partial y_11)/(partial x_11) = (partial cal(L))/(partial y_11) dot.c {1 "if" x_11 > 0 "else" 0} \
+  (partial cal(L))/(partial x_12) = (partial cal(L))/(partial y_12) dot.c (partial y_12)/(partial x_11) = (partial cal(L))/(partial y_12) dot.c {1 "if" x_12 > 0 "else" 0} \
+  (partial cal(L))/(partial x_21) = (partial cal(L))/(partial y_21) dot.c (partial y_21)/(partial x_11) = (partial cal(L))/(partial y_21) dot.c {1 "if" x_21 > 0 "else" 0} \
+  (partial cal(L))/(partial x_22) = (partial cal(L))/(partial y_22) dot.c (partial y_22)/(partial x_11) = (partial cal(L))/(partial y_22) dot.c {1 "if" x_22 > 0 "else" 0} \
+$
+
+整理成矩阵形式如下
+
+$
+  (partial upright(bold(Y)))/(partial upright(bold(X))) = (partial cal(L))/(partial upright(bold(Y))) dot.o underbrace({upright(bold(X)) > 0}, "numpy中" \ "的计算方式")
+$
+
+```python
+import numpy as np
+
+X = np.array([[1,2],[3,-1]])
+print(X > 0)
+print(1 * (X > 0))
+```
+
+=== 矩阵转置的求导
+
+$
+  upright(bold(Y)) = upright(bold(X))^T
+$
+
+转置也是一个函数，那么我们还是从标量函数开始求导。
+
+$
+  (partial cal(L))/(partial x_11) & = (partial cal(L))/(partial y_11) dot.c (partial y_11)/(partial x_11) = (partial cal(L))/(partial y_11) \
+  (partial cal(L))/(partial x_12) & = (partial cal(L))/(partial y_21) dot.c (partial y_21)/(partial x_12) = (partial cal(L))/(partial y_21) \
+  (partial cal(L))/(partial x_21) & = (partial cal(L))/(partial y_12) dot.c (partial y_12)/(partial x_21) = (partial cal(L))/(partial y_12) \
+  (partial cal(L))/(partial x_22) & = (partial cal(L))/(partial y_22) dot.c (partial y_22)/(partial x_22) = (partial cal(L))/(partial y_22) \
+$
+
+所以
+
+$
+  (partial cal(L))/(partial upright(bold(X))) = ((partial cal(L))/(partial upright(bold(Y))))^T
+$
+
+
+
 === 黑塞矩阵（Hessian Matrix）
 
 对于二阶可微的标量函数$f: RR^n arrow RR$，黑塞矩阵（Hessian Matrix） 是由所有二阶偏导数组成的$n times n$方阵：
