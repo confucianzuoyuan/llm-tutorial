@@ -1036,6 +1036,372 @@ $
   upright(bold(H))_(i j) = (partial^2 f)/(partial x_i partial x_j)
 $
 
+== 数值优化
+
+=== 数值优化要解决的问题
+
+所谓数值优化基本就是在研究如何得到一个函数的最大值或者最小值，深度学习在表面上看，是一个*无约束优化问题*。
+
+$
+  min_theta cal(L)(theta)
+$
+
+函数$cal(L)$的参数是$theta$，如何找到参数$theta$使得$cal(L)$最小呢？
+
+这可以说是深度学习要解决的问题。
+
+$
+  max_theta J(theta) space space "等价于" space space min_theta {-J(theta)}
+$
+
+=== 凸函数
+
+先从一元凸函数开始讨论。
+
+函数$f: RR arrow RR$称为凸函数（convex function），如果对于定义域内的任意两点$x, y$和任意$lambda in [0,1]$，都有：
+
+$
+  f(lambda x + (1-lambda) y) <= lambda f(x) + (1-lambda) f(y)
+$
+
+*几何意义*：连接函数图像上任意两点的线段，位于函数图像的上方或与之重合。
+
+当$lambda != 0 且 lambda != 1$，也就是$lambda in (0,1)$且$x != y$时，不等号严格成立
+
+$
+  f(lambda x + (1-lambda) y) < lambda f(x) + (1-lambda) f(y)
+$
+
+则称$f$为*严格凸函数*（strictly convex function）。
+
+如果不等号方向相反，则$f$为*凹函数*
+
+$
+  f(lambda x + (1-lambda) y) >= lambda f(x) + (1-lambda) f(y)
+$
+
+既不是凸函数也不是凹函数的，叫做*非凸函数*。
+
+#figure(
+  image("figures/convex-functions.svg"),
+  caption: [凸函数，凹函数等],
+)
+
+凸函数的重要性质：局部最小值=全局最小值
+
+判定凸函数的条件：
+
+我们先来看一下一元凸函数
+
+- 一阶条件
+
+对于可微函数，$f$是凸函数当且仅当
+
+$
+  f(y) >= f(x) + f'(x)(y-x), forall x, y in RR
+$
+
+- 二阶条件
+
+对于二阶可微函数，$f$是凸函数 当且仅当：
+
+$
+  f''(x) >= 0, forall x in RR
+$
+
+上面两个条件，满足一个，就可以判定函数是凸函数。
+
+多元凸函数和一元凸函数很类似
+
+函数$f: RR^n arrow RR$称为凸函数（convex function），如果对于定义域内的任意两点$upright(bold(x)), upright(bold(y))$和任意$lambda in [0, 1]$，都有：
+
+$
+  f(lambda upright(bold(x)) + (1-lambda)upright(bold(y))) <= lambda f(upright(bold(x))) + (1-lambda)f(upright(bold(y)))
+$
+
+- 一阶条件
+
+$
+  f(upright(bold(y))) >= f(upright(bold(x))) + nabla f(upright(bold(x)))^T (upright(bold(y))-upright(bold(x)))
+$
+
+- 二阶条件
+
+黑塞矩阵$nabla^2 f(upright(bold(x)))$是*半正定矩阵*。
+
+=== 梯度下降法
+
+梯度下降法奠定了机器学习和深度学习技术的基础。让我们探索它的工作原理、适用场景以及在不同函数中的表现特性。
+
+#image("figures/梯度下降法.png")
+
+==== 简介
+
+梯度下降是一种迭代式一阶优化算法，用于寻找给定函数的局部最小值/最大值。这种方法在机器学习与深度学习领域广泛用于最小化损失函数（例如线性回归场景）。
+
+我们将会深入探讨一阶梯度下降算法的数学原理、实现方式和行为特性。我们将直接引导自定义的函数来寻找其最小值。
+
+梯度下降法由柯西在1847年提出，远早于现代计算机时代。自那时起，计算机科学与数值方法领域取得了长足发展，由此衍生出众多改进版的梯度下降算法。
+
+==== 对函数的要求
+
+梯度下降法并不适用于所有函数，有两个特定的要求。函数必须是：
+
+- 可微函数（可以求导的）
+- 凸函数
+
+首先，可微是什么意思？如果一个函数是可微的，那么在其定义域内的每个点都有导数——并非所有函数都满足这个标准。首先，我们来看一些满足这个标准的函数示例：
+
+#figure(
+  image("figures/examples-of-differentiable-functions.svg"),
+  caption: [可微函数示例],
+)
+
+典型的不可微函数具有阶梯、尖点或不连续点：
+
+#figure(
+  image("figures/examples-of-non-differentiable-functions.svg"),
+  caption: [不可微函数示例],
+)
+
+下一个要求——函数必须是凸函数。对于一元函数而言，这意味着连接函数上任意两点的线段均位于曲线之上或与之相切（不会穿越曲线）。若线段穿越曲线，则表明函数存在局部最小值而非全局最小值。
+
+数学上，对于位于函数曲线上的两点$x_1$和$x_2$，一个函数是凸函数的条件可表示为：
+
+$
+  f(lambda x_1 + (1-lambda)x_2) <= lambda f(x_1) + (1-lambda)f(x_2)
+$
+
+其中$lambda$表示点在截线上的位置，其值必须在$0$（左侧点）和$1$（右侧点）之间，例如$lambda=0.5$表示中点位置。
+
+以下是两个带有示例截线的函数。
+
+#figure(
+  image("figures/convex-vs-non-convex.svg"),
+  caption: [凸函数与非凸函数示例图],
+)
+
+判断单变量函数是否为凸函数的另一种数学方法是计算其二阶导数，并检查其值是否始终大于$0$。
+
+$
+  (d^2 f(x))/(d x^2) > 0, "对于定义域内所有的"x
+$
+
+我们研究一个由以下公式给出的简单二次函数：
+
+$
+  f(x) = x^2 - x + 3
+$
+
+其一阶导数和二阶导数分别为：
+
+$
+      (d f(x))/(d x) & = 2x-1 \
+  (d^2 f(x))/(d x^2) & = 2
+$
+
+由于二阶导数始终大于$0$，该函数为严格凸函数。
+
+梯度下降法同样可应用于拟凸函数（quasi-convex functions）。然而这类函数常存在所谓鞍点（saddle points），梯度下降法可能在此陷入停滞。一个拟凸函数的示例如下：
+
+$
+                f(x) & = x^4 - 2x^3 + 2 \
+      (d f(x))/(d x) & = 4x^3 - 6x^2 = x^2(4x-6) \
+  (d^2 f(x))/(d x^2) & = 12x^2 + 12x = 12x(x-1)
+$
+
+我们注意到一阶导数在$x=0$和$x=1.5$处为$0$，这些位置是函数极值点（极小值或极大值）的候选点——该处斜率为零。但首先需要验证二阶导数的情况。
+
+在$x=0$和$x=1$处，二阶导数的值为$0$。这些位置被称为拐点——即曲率改变符号的地方——意味着函数从凸变为凹，或反之亦然。通过分析这个方程，我们得出以下结论：
+
+- 当$x<0$时：函数是凸的
+- 当$0<x<1$时：函数是凹的（二阶导数$<0$）
+- 当$x>1$时：函数再次变为凸的
+
+现在我们看到点$x=0$处的一阶导数和二阶导数均为$0$，这表明此处是鞍点，而点$x=1.5$则是全局最小值点。
+
+我们来看一下这个函数的图像。如前计算，鞍点位于$x=0$处，最小值点位于$x=1.5$处。
+
+#figure(
+  image("figures/semi-convex-function-with-saddle-point.svg"),
+  caption: [具有鞍点的半凸（semi-convex）函数],
+)
+
+对于多变量函数，判断某点是否为鞍点的最合适方法是计算 Hessian 矩阵，我们后面再讲。
+
+一个双变量函数$z=x^2-y^2$的鞍点的示例如下图所示。
+
+#figure(
+  image("figures/saddle-point-2d.svg"),
+  caption: [$z=x^2-y^2$的鞍点示意图],
+)
+
+==== 梯度
+
+直观地说，梯度代表了在指定方向上某一点处曲线的斜率。
+
+对于单变量函数来说，它就是选定点的一阶导数。对于多变量函数而言，梯度是沿各主方向（顺变量坐标轴）的导数向量。因为我们只关心沿某一坐标轴的斜率，而不在意其他方向的变化，所以这些导数被称为偏导数。
+
+$n$维函数$f(x)$在给定点$p$处的梯度定义如下：
+
+$
+  nabla f(p) = mat((partial f)/(partial x_1)(p); dots.v; (partial f)/(partial x_n)(p))
+$
+
+倒三角形$nabla$就是所谓的nabla符号，读作"del"。为了更好地理解如何计算梯度，让我们为下面这个二维示例函数$f(x)=0.5x^2+y^2$进行手动计算。
+
+#figure(
+  image("figures/3d-image.svg"),
+  caption: [$f(x)=0.5x^2+y^2$示意图],
+)
+
+假设我们关注点$p(10,10)$处的梯度：
+
+$
+  (partial f(x,y))/(partial x) & = x \
+  (partial f(x,y))/(partial y) & = 2y
+$
+
+因此可得：
+
+$
+    nabla f(x,y) & = mat(x; 2y) \
+  nabla f(10,10) & = mat(10; 20)
+$
+
+观察这些数值可知，沿$y$轴方向的斜率是$x$轴方向的两倍。
+
+==== 梯度下降法
+
+梯度下降法迭代地利用当前位置的梯度计算下一个点，通过学习率进行缩放，并从当前位置减去所得值（即执行一步移动）。之所以减去该值，是因为我们想要最小化函数（若要最大化则应相加）。这一过程可以写作：
+
+$
+  p_(n+1) = p_n - eta nabla f(p_n)
+$
+
+存在一个关键参数$eta$，它通过缩放梯度来控制步长大小。在机器学习中，该参数被称为学习率，对算法性能具有重要影响。
+
+- 学习率越小，梯度下降收敛所需时间越长，甚至可能在达到最优解前触及最大迭代次数限制。
+- 若学习率过大，算法可能无法收敛至最优点（持续震荡），甚至可能完全发散。
+
+总而言之，梯度下降法的步骤包括：
+
+#figure(
+  algo(
+    line-numbers: true,
+    strong-keywords: false,
+    comment-prefix: [#sym.triangle.stroked.r ],
+    comment-styles: (fill: rgb(100%, 0%, 0%)),
+    header: [#box(stroke: 0.1em, inset: 0.3em)[梯度下降法步骤]],
+  )[
+    选择一个起始点 #comment[初始化] \
+    计算该点的梯度 \
+    向着梯度的相反方向按比例移动一步 #comment[目标：最小化] \
+    重复步骤2和3，直到满足以下任一条件：
+    - 达到最大迭代次数
+    - 步长小于阈值 #comment[因为缩放或者梯度较小所致]
+  ],
+  caption: [梯度下降法步骤],
+)
+
+#codly(header: [梯度下降法代码实现], header-cell-args: (align: center))
+```python
+import numpy as np
+from typing import Callable
+
+def gradient_descent(start: float, gradient: Callable[[float], float],
+                     learn_rate: float, max_iter: int, tol: float = 0.01):
+    x = start
+    steps = [start]  # 历史跟踪
+
+    for _ in range(max_iter):
+        diff = learn_rate * gradient(x)
+        if np.abs(diff) < tol:
+            break
+        x = x - diff
+        steps.append(x)  # 历史跟踪
+
+    return steps, x
+```
+
+这个函数接收5个参数：
+
+1. *起始点*[`float`]——我们这里手动定义了起始点，但在实践中，起始点通常是随机初始化的。
+2. *梯度函数*[`object`]——计算梯度的函数（需要实现定义好然后传给上面的函数）
+3. *学习率*[`float`]——步长的缩放因子
+4. *最大迭代次数*[`int`]
+5. *阈值*[`float`]——算法停止的一个条件（这里默认是0.01）
+
+==== 示例1——二次函数
+
+我们的二次函数为
+
+$
+  f(x) = x^2 - 4x + 1
+$
+
+由于是单变量函数，所以梯度函数为
+
+$
+  (d f(x))/(d x) = 2x - 4
+$
+
+写成代码如下
+
+```python
+def func1(x: float):
+    return x ** 2 - 4 * x + 1
+
+def gradient_func1(x: float):
+    return 2 * x - 4
+```
+
+当选择起始点$x=9$以及学习率为$0.1$时，我们可以手动计算一下每一步的过程。例如前三步如下：
+
+$
+  x_0 & = 9 \
+  x_1 & = 9 - 0.1 times (2 times 9 - 4) = 7.6 \
+  x_2 & = 7.6 - 0.1 times (2 times 7.6 - 4) = 6.48 \
+  x_3 & = 6.48 - 0.1 times (2 times 6.48 - 4) = 5.584
+$
+
+代码如下
+
+```python
+history, result = gradient_descent(9, gradient_func1, 0.1, 100)
+```
+
+如图所示，对于较小的学习率，随着算法逼近最小值，步长逐渐变小。而较大的学习率则在收敛前在两侧来回跳跃。
+
+#figure(
+  image("figures/various-learning-rates.svg"),
+  caption: [不同学习率的对比],
+)
+
+==== 示例2——包含鞍点的函数
+
+现在让我们看看算法将如何处理我们先前进行数学分析的半凸函数。
+
+$
+  f(x) = x^4 - 2x^3 + 2
+$
+
+下方展示了两种学习率与两种不同起始点的运算结果。
+
+#figure(
+  image("figures/escape-from-saddle.svg"),
+  caption: [梯度下降法尝试逃离鞍点示意图],
+)
+
+#figure(
+  image("figures/escape-from-saddle-1.svg"),
+  caption: [没有逃离鞍点],
+)
+
+现在可以看到，鞍点的存在确实给一阶梯度下降法带来了严峻挑战，且无法保证最终能达到全局最小值。二阶优化算法（如牛顿法、拟牛顿法）在此类情况下的表现则更为出色。
+
+我们探讨了梯度下降法的运作机制、适用场景以及使用过程中常见的挑战。后面我们会进一步探索更先进的基于梯度的优化方法，例如动量法、Nesterov加速梯度下降、RMSprop、Adam，或是牛顿法等二阶优化方法。
+
 == 自动微分
 
 === 数值微分和符号微分的缺点
@@ -1135,85 +1501,6 @@ $
 所以我们需要寻找其它自动微分的方法，那就是深度学习的核心算法：大名鼎鼎的*反向传播算法*。
 
 === 反向传播算法
-
-
-
-== 数值优化
-
-=== 凸函数
-
-先从一元凸函数开始讨论。
-
-函数$f: RR arrow RR$称为凸函数（convex function），如果对于定义域内的任意两点$x, y$和任意$lambda in [0,1]$，都有：
-
-$
-  f(lambda x + (1-lambda) y) <= lambda f(x) + (1-lambda) f(y)
-$
-
-*几何意义*：连接函数图像上任意两点的线段，位于函数图像的上方或与之重合。
-
-当$lambda != 0 且 lambda != 1$，也就是$lambda in (0,1)$且$x != y$时，不等号严格成立
-
-$
-  f(lambda x + (1-lambda) y) < lambda f(x) + (1-lambda) f(y)
-$
-
-则称$f$为*严格凸函数*（strictly convex function）。
-
-如果不等号方向相反，则$f$为*凹函数*
-
-$
-  f(lambda x + (1-lambda) y) >= lambda f(x) + (1-lambda) f(y)
-$
-
-既不是凸函数也不是凹函数的，叫做*非凸函数*。
-
-#figure(
-  image("figures/convex-functions.svg"),
-  caption: [凸函数，凹函数等],
-)
-
-凸函数的重要性质：局部最小值=全局最小值
-
-判定凸函数的条件：
-
-我们先来看一下一元凸函数
-
-- 一阶条件
-
-对于可微函数，$f$是凸函数当且仅当
-
-$
-  f(y) >= f(x) + f'(x)(y-x), forall x, y in RR
-$
-
-- 二阶条件
-
-对于二阶可微函数，$f$是凸函数 当且仅当：
-
-$
-  f''(x) >= 0, forall x in RR
-$
-
-上面两个条件，满足一个，就可以判定函数是凸函数。
-
-多元凸函数和一元凸函数很类似
-
-函数$f: RR^n arrow RR$称为凸函数（convex function），如果对于定义域内的任意两点$upright(bold(x)), upright(bold(y))$和任意$lambda in [0, 1]$，都有：
-
-$
-  f(lambda upright(bold(x)) + (1-lambda)upright(bold(y))) <= lambda f(upright(bold(x))) + (1-lambda)f(upright(bold(y)))
-$
-
-- 一阶条件
-
-$
-  f(upright(bold(y))) >= f(upright(bold(x))) + nabla f(upright(bold(x)))^T (upright(bold(y))-upright(bold(x)))
-$
-
-- 二阶条件
-
-黑塞矩阵$nabla^2 f(upright(bold(x)))$是*半正定矩阵*。
 
 == 概率论
 
@@ -4240,554 +4527,3 @@ $
 这可能看起来很矛盾，因为一个给定阶数的多项式包含了所有更低阶的多项式作为特例。因此，$M=9$的多项式理应能够产生至少与$M=3$的多项式一样好的结果。此外，我们或许会认为，预测新数据的最佳模型就应该是生成这些数据的真实函数$sin(2pi x)$本身（我们后续将验证这一点）。同时，我们知道$sin(2pi x)$的幂级数展开式中包含了所有阶数的项，所以我们会很自然地推断，随着模型复杂度$M$的增加，预测效果应该会持续提升。
 
 通过观察表1.1中不同阶数多项式拟合得到的系数$upright(bold(w))*$，我们可以更深入地了解这个问题。我们注意到，随着$M$的增加，系数的幅度越来越大。特别是当$M=9$时，为了让对应的多项式曲线能精准地穿过每一个数据点，这些系数被精细地调整到了很大的正值或负值。但在数据点之间，尤其是在数据范围的两端附近，曲线却出现了大幅度的摆动，正如我们在图1.7中看到的那样。直观地看，当多项式模型具有较大的$M$值时，它变得更加灵活，从而更容易受到目标值上随机噪声的影响，并过度拟合了这些噪声。
-
-
-
-#chapter("梯度下降法", image: image("./orange2.jpg"), l: "dl-sgd")
-
-梯度下降法奠定了机器学习和深度学习技术的基础。让我们探索它的工作原理、适用场景以及在不同函数中的表现特性。
-
-#image("figures/梯度下降法.png")
-
-== 简介
-
-梯度下降是一种迭代式一阶优化算法，用于寻找给定函数的局部最小值/最大值。这种方法在机器学习与深度学习领域广泛用于最小化损失函数（例如线性回归场景）。
-
-我们将会深入探讨一阶梯度下降算法的数学原理、实现方式和行为特性。我们将直接引导自定义的函数来寻找其最小值。
-
-梯度下降法由柯西在1847年提出，远早于现代计算机时代。自那时起，计算机科学与数值方法领域取得了长足发展，由此衍生出众多改进版的梯度下降算法。
-
-== 对函数的要求
-
-梯度下降法并不适用于所有函数，有两个特定的要求。函数必须是：
-
-- 可微函数（可以求导的）
-- 凸函数
-
-首先，可微是什么意思？如果一个函数是可微的，那么在其定义域内的每个点都有导数——并非所有函数都满足这个标准。首先，我们来看一些满足这个标准的函数示例：
-
-#figure(
-  image("figures/examples-of-differentiable-functions.svg"),
-  caption: [可微函数示例],
-)
-
-典型的不可微函数具有阶梯、尖点或不连续点：
-
-#figure(
-  image("figures/examples-of-non-differentiable-functions.svg"),
-  caption: [不可微函数示例],
-)
-
-下一个要求——函数必须是凸函数。对于一元函数而言，这意味着连接函数上任意两点的线段均位于曲线之上或与之相切（不会穿越曲线）。若线段穿越曲线，则表明函数存在局部最小值而非全局最小值。
-
-数学上，对于位于函数曲线上的两点$x_1$和$x_2$，一个函数是凸函数的条件可表示为：
-
-$
-  f(lambda x_1 + (1-lambda)x_2) <= lambda f(x_1) + (1-lambda)f(x_2)
-$
-
-其中$lambda$表示点在截线上的位置，其值必须在$0$（左侧点）和$1$（右侧点）之间，例如$lambda=0.5$表示中点位置。
-
-以下是两个带有示例截线的函数。
-
-#figure(
-  image("figures/convex-vs-non-convex.svg"),
-  caption: [凸函数与非凸函数示例图],
-)
-
-判断单变量函数是否为凸函数的另一种数学方法是计算其二阶导数，并检查其值是否始终大于$0$。
-
-$
-  (d^2 f(x))/(d x^2) > 0, "对于定义域内所有的"x
-$
-
-我们研究一个由以下公式给出的简单二次函数：
-
-$
-  f(x) = x^2 - x + 3
-$
-
-其一阶导数和二阶导数分别为：
-
-$
-      (d f(x))/(d x) & = 2x-1 \
-  (d^2 f(x))/(d x^2) & = 2
-$
-
-由于二阶导数始终大于$0$，该函数为严格凸函数。
-
-梯度下降法同样可应用于拟凸函数（quasi-convex functions）。然而这类函数常存在所谓鞍点（saddle points），梯度下降法可能在此陷入停滞。一个拟凸函数的示例如下：
-
-$
-                f(x) & = x^4 - 2x^3 + 2 \
-      (d f(x))/(d x) & = 4x^3 - 6x^2 = x^2(4x-6) \
-  (d^2 f(x))/(d x^2) & = 12x^2 + 12x = 12x(x-1)
-$
-
-我们注意到一阶导数在$x=0$和$x=1.5$处为$0$，这些位置是函数极值点（极小值或极大值）的候选点——该处斜率为零。但首先需要验证二阶导数的情况。
-
-在$x=0$和$x=1$处，二阶导数的值为$0$。这些位置被称为拐点——即曲率改变符号的地方——意味着函数从凸变为凹，或反之亦然。通过分析这个方程，我们得出以下结论：
-
-- 当$x<0$时：函数是凸的
-- 当$0<x<1$时：函数是凹的（二阶导数$<0$）
-- 当$x>1$时：函数再次变为凸的
-
-现在我们看到点$x=0$处的一阶导数和二阶导数均为$0$，这表明此处是鞍点，而点$x=1.5$则是全局最小值点。
-
-我们来看一下这个函数的图像。如前计算，鞍点位于$x=0$处，最小值点位于$x=1.5$处。
-
-#figure(
-  image("figures/semi-convex-function-with-saddle-point.svg"),
-  caption: [具有鞍点的半凸（semi-convex）函数],
-)
-
-对于多变量函数，判断某点是否为鞍点的最合适方法是计算 Hessian 矩阵，我们后面再讲。
-
-一个双变量函数$z=x^2-y^2$的鞍点的示例如下图所示。
-
-#figure(
-  image("figures/saddle-point-2d.svg"),
-  caption: [$z=x^2-y^2$的鞍点示意图],
-)
-
-== 梯度
-
-直观地说，梯度代表了在指定方向上某一点处曲线的斜率。
-
-对于单变量函数来说，它就是选定点的一阶导数。对于多变量函数而言，梯度是沿各主方向（顺变量坐标轴）的导数向量。因为我们只关心沿某一坐标轴的斜率，而不在意其他方向的变化，所以这些导数被称为偏导数。
-
-$n$维函数$f(x)$在给定点$p$处的梯度定义如下：
-
-$
-  nabla f(p) = mat((partial f)/(partial x_1)(p); dots.v; (partial f)/(partial x_n)(p))
-$
-
-倒三角形$nabla$就是所谓的nabla符号，读作"del"。为了更好地理解如何计算梯度，让我们为下面这个二维示例函数$f(x)=0.5x^2+y^2$进行手动计算。
-
-#figure(
-  image("figures/3d-image.svg"),
-  caption: [$f(x)=0.5x^2+y^2$示意图],
-)
-
-假设我们关注点$p(10,10)$处的梯度：
-
-$
-  (partial f(x,y))/(partial x) & = x \
-  (partial f(x,y))/(partial y) & = 2y
-$
-
-因此可得：
-
-$
-    nabla f(x,y) & = mat(x; 2y) \
-  nabla f(10,10) & = mat(10; 20)
-$
-
-观察这些数值可知，沿$y$轴方向的斜率是$x$轴方向的两倍。
-
-== 梯度下降法
-
-梯度下降法迭代地利用当前位置的梯度计算下一个点，通过学习率进行缩放，并从当前位置减去所得值（即执行一步移动）。之所以减去该值，是因为我们想要最小化函数（若要最大化则应相加）。这一过程可以写作：
-
-$
-  p_(n+1) = p_n - eta nabla f(p_n)
-$
-
-存在一个关键参数$eta$，它通过缩放梯度来控制步长大小。在机器学习中，该参数被称为学习率，对算法性能具有重要影响。
-
-- 学习率越小，梯度下降收敛所需时间越长，甚至可能在达到最优解前触及最大迭代次数限制。
-- 若学习率过大，算法可能无法收敛至最优点（持续震荡），甚至可能完全发散。
-
-总而言之，梯度下降法的步骤包括：
-
-#figure(
-  algo(
-    line-numbers: true,
-    strong-keywords: false,
-    comment-prefix: [#sym.triangle.stroked.r ],
-    comment-styles: (fill: rgb(100%, 0%, 0%)),
-    header: [#box(stroke: 0.1em, inset: 0.3em)[梯度下降法步骤]],
-  )[
-    选择一个起始点 #comment[初始化] \
-    计算该点的梯度 \
-    向着梯度的相反方向按比例移动一步 #comment[目标：最小化] \
-    重复步骤2和3，直到满足以下任一条件：
-    - 达到最大迭代次数
-    - 步长小于阈值 #comment[因为缩放或者梯度较小所致]
-  ],
-  caption: [梯度下降法步骤],
-)
-
-#codly(header: [梯度下降法代码实现], header-cell-args: (align: center))
-```python
-import numpy as np
-from typing import Callable
-
-def gradient_descent(start: float, gradient: Callable[[float], float],
-                     learn_rate: float, max_iter: int, tol: float = 0.01):
-    x = start
-    steps = [start]  # 历史跟踪
-
-    for _ in range(max_iter):
-        diff = learn_rate * gradient(x)
-        if np.abs(diff) < tol:
-            break
-        x = x - diff
-        steps.append(x)  # 历史跟踪
-
-    return steps, x
-```
-
-这个函数接收5个参数：
-
-1. *起始点*[`float`]——我们这里手动定义了起始点，但在实践中，起始点通常是随机初始化的。
-2. *梯度函数*[`object`]——计算梯度的函数（需要实现定义好然后传给上面的函数）
-3. *学习率*[`float`]——步长的缩放因子
-4. *最大迭代次数*[`int`]
-5. *阈值*[`float`]——算法停止的一个条件（这里默认是0.01）
-
-== 示例1——二次函数
-
-我们的二次函数为
-
-$
-  f(x) = x^2 - 4x + 1
-$
-
-由于是单变量函数，所以梯度函数为
-
-$
-  (d f(x))/(d x) = 2x - 4
-$
-
-写成代码如下
-
-```python
-def func1(x: float):
-    return x ** 2 - 4 * x + 1
-
-def gradient_func1(x: float):
-    return 2 * x - 4
-```
-
-当选择起始点$x=9$以及学习率为$0.1$时，我们可以手动计算一下每一步的过程。例如前三步如下：
-
-$
-  x_0 & = 9 \
-  x_1 & = 9 - 0.1 times (2 times 9 - 4) = 7.6 \
-  x_2 & = 7.6 - 0.1 times (2 times 7.6 - 4) = 6.48 \
-  x_3 & = 6.48 - 0.1 times (2 times 6.48 - 4) = 5.584
-$
-
-代码如下
-
-```python
-history, result = gradient_descent(9, gradient_func1, 0.1, 100)
-```
-
-如图所示，对于较小的学习率，随着算法逼近最小值，步长逐渐变小。而较大的学习率则在收敛前在两侧来回跳跃。
-
-#figure(
-  image("figures/various-learning-rates.svg"),
-  caption: [不同学习率的对比],
-)
-
-== 示例2——包含鞍点的函数
-
-现在让我们看看算法将如何处理我们先前进行数学分析的半凸函数。
-
-$
-  f(x) = x^4 - 2x^3 + 2
-$
-
-下方展示了两种学习率与两种不同起始点的运算结果。
-
-#figure(
-  image("figures/escape-from-saddle.svg"),
-  caption: [梯度下降法尝试逃离鞍点示意图],
-)
-
-#figure(
-  image("figures/escape-from-saddle-1.svg"),
-  caption: [没有逃离鞍点],
-)
-
-现在可以看到，鞍点的存在确实给一阶梯度下降法带来了严峻挑战，且无法保证最终能达到全局最小值。二阶优化算法（如牛顿法、拟牛顿法）在此类情况下的表现则更为出色。
-
-我们探讨了梯度下降法的运作机制、适用场景以及使用过程中常见的挑战。后面我们会进一步探索更先进的基于梯度的优化方法，例如动量法、Nesterov加速梯度下降、RMSprop、Adam，或是牛顿法等二阶优化方法。
-
-#part("反向传播算法")
-
-线性层的求导公式推导
-
-$
-  y & = w_1 x_1 + w_2 x_2 + w_3 x_3 + b \
-  & = underbrace(mat(x_1, x_2, x_3), 1 times 3) underbrace(mat(w_1; w_2; w_3), 3 times 1) + underbrace(mat(b), 1 times 1)
-$
-
-假设损失函数是$cal(L)$。#underline("损失函数是一个标量值！")
-
-① 求解$(upright(d)cal(L))/(upright(d)w)$
-
-$
-  (upright(d)cal(L))/(upright(d)w) & = (upright(d)cal(L))/(upright(d)y) dot.c (upright(d)y)/(upright(d)w) \
-  & = underbrace(mat((upright(d)y)/(upright(d)w); (upright(d)y)/(upright(d)w); (upright(d)y)/(upright(d)w)), 3 times 1) underbrace((upright(d)cal(L))/(upright(d)y), 1 times 1) \
-  & = mat(x_1; x_2; x_3) (upright(d)cal(L))/(upright(d)y) \
-  & = x^T dot.c underbrace((upright(d)cal(L))/(upright(d)y), "一个"1 times 1"的矩阵")
-$
-
-② 求解$(upright(d)cal(L))/(upright(d)b)$
-
-$
-  (upright(d)cal(L))/(upright(d)b) = (upright(d)cal(L))/(upright(d)y) dot.c underbrace((upright(d)cal(L))/(upright(d)b), 1) = (upright(d)cal(L))/(upright(d)y)
-$
-
-③ 求解$(upright(d)cal(L))/(upright(d)x)$
-
-$
-  (upright(d)cal(L))/(upright(d)x) & = overbrace((upright(d)cal(L))/(upright(d)y), 1 times 1) dot.c overbrace((upright(d)y)/(upright(d)x), 1 times 3) \
-  & = (upright(d)cal(L))/(upright(d)y) mat(w_1, w_2, w_3) \
-  & = (upright(d)cal(L))/(upright(d)y) w^T
-$
-
-带批次的梯度
-
-$
-  mat(y_1; y_2) = overbrace(mat(x_11, x_12, x_13; x_21, x_22, x_23), 2 times 3) overbrace(mat(w_1; w_2; w_3), 3 times 1) + overbrace(mat(b), "广播！")
-$
-
-$
-  (upright(d)cal(L))/(upright(d)w) = mat((upright(d)cal(L))/(upright(d)w_1); (upright(d)cal(L))/(upright(d)w_2); (upright(d)cal(L))/(upright(d)w_3))
-$
-
-①
-
-$
-  (upright(d)cal(L))/(upright(d)w_1) & = (upright(d)cal(L))/(upright(d)y) dot.c (upright(d)y)/(upright(d)w_1) \
-  & = (upright(d)cal(L))/(upright(d)y_1) dot.c (upright(d)y_1)/(upright(d)w_1) + (upright(d)cal(L))/(upright(d)y_2) dot.c (upright(d)y_2)/(upright(d)w_1) \
-  & = (upright(d)cal(L))/(upright(d)y_1) dot.c x_11 + (upright(d)cal(L))/(upright(d)y_2) dot.c x_21
-$
-
-所以
-
-$
-  (upright(d)cal(L))/(upright(d)w) & = mat((upright(d)cal(L))/(upright(d)y_1) dot.c x_11 + (upright(d)cal(L))/(upright(d)y_2) dot.c x_21; (upright(d)cal(L))/(upright(d)y_1) dot.c x_12 + (upright(d)cal(L))/(upright(d)y_2) dot.c x_22; (upright(d)cal(L))/(upright(d)y_1) dot.c x_13 + (upright(d)cal(L))/(upright(d)y_2) dot.c x_23) \
-  & = mat(x_11, x_21; x_12, x_22; x_13, x_23)mat((upright(d)cal(L))/(upright(d)y_1); (upright(d)cal(L))/(upright(d)y_2)) \
-  & = x^T dot.c (upright(d)cal(L))/(upright(d)y)
-$
-
-②
-
-$
-  (upright(d)cal(L))/(upright(d)b) = (upright(d)cal(L))/(upright(d)y_1) (upright(d)y_1)/(upright(d)b) + (upright(d)cal(L))/(upright(d)y_2) (upright(d)y_2)/(upright(d)b) = (upright(d)cal(L))/(upright(d)y_1) + (upright(d)cal(L))/(upright(d)y_2)
-$
-
-③
-
-$
-  (upright(d)cal(L))/(upright(d)x) = (upright(d)cal(L))/(upright(d)y)w^T
-$
-
-softmax函数的求导
-
-$
-  accent(o, arrow) = mat(o_1, o_2, o_3, dots.c, o_N)
-$
-
-$
-  "softmax"(accent(o, arrow)) = mat(s_1, s_2, s_3, dots.c, s_N)
-$
-
-其中
-
-$
-  s_i = e^(o_i)/(sum_(k=1)^N e^(o_k))
-$
-
-如果$i=j$，那么有如下：
-
-$
-  (upright(d)s_i)/(upright(d)o_j) & = ((sum_(k=1)^N e^(o_k))e^(o_i) - e^(o_i)e^(o_j))/((sum_(k=1)^N e^(o_k))^2) \
-  & = (e^(o_i)(sum_(k=1)^N e^(o_k) - e^(o_j)))/(sum_(k=1)^N e^(o_k))^2 \
-  & = e^(o_i)/(sum_(k=1)^N e^(o_k)) dot.c (sum_(k=1)^N e^(o_k) - e^(o_j))/(sum_(k=1)^N e^(o_k)) \
-  & = s_i (1 - s_j)
-$
-
-如果$i != j$，那么有如下：
-
-$
-  (upright(d)s_i)/(upright(d)o_j) & = ((sum_(k=1)^N e^(o_k)) 0 - e^(o_i)e^(o_j))/((sum_(k=1)^N e^(o_k))^2) \
-                                  & = - e^(o_i)/(sum_(k=1)^N e^(o_k)) e^(o_j)/(sum_(k=1)^N e^(o_k)) \
-                                  & = -s_i s_j
-$
-
-所以
-
-$
-  J & = mat((upright(d)s_1)/(upright(d)o_1), (upright(d)s_1)/(upright(d)o_2), (upright(d)s_1)/(upright(d)o_3); (upright(d)s_2)/(upright(d)o_1), (upright(d)s_2)/(upright(d)o_2), (upright(d)s_2)/(upright(d)o_3); (upright(d)s_3)/(upright(d)o_1), (upright(d)s_3)/(upright(d)o_2), (upright(d)s_3)/(upright(d)o_3)) \
-  & = mat(s_1(1-s_1), -s_1 s_2, -s_1 s_3; -s_2 s_1, s_2(1-s_2), -s_2 s_3; -s_3 s_1, -s_3 s_2, s_3(1-s_3))
-$
-
-softmax的数值稳定性
-
-$
-  (e^(x-c))/(sum e^(x-c)) = (e^x"/"e^c)/((sum e^x)"/"e^c)
-$
-
-如果引入损失函数，也就是说，我们想要求解$(upright(d)cal(L))/(upright(d)o_j)$，而$o_j$对所有$s_1, s_2, s_3, dots.c$都有梯度。那么有如下：
-
-$
-  (upright(d)cal(L))/(upright(d)o_j) & = sum_i (upright(d)cal(L))/(upright(d)s_i) dot.c (upright(d)s_i)/(upright(d)o_j) \
-  & = sum_i (upright(d)cal(L))/(upright(d)s_i) (s_i (delta_(i j) - s_j)) \
-  & = (upright(d)cal(L))/(upright(d)s_j)(s_j (1-s_j)) + sum_(i \ i != j) (upright(d)cal(L))/(upright(d)s_i)(-s_i s_j) \
-  & = (upright(d)cal(L))/(upright(d)s_j)s_j - (upright(d)cal(L))/(upright(d)s_j)s_j s_j - sum_(i \ i != j) (upright(d)cal(L))/(upright(d)s_i)(s_i s_j) \
-  & = (upright(d)cal(L))/(upright(d)s_j)s_j - sum_i (upright(d)cal(L))/(upright(d)s_i)(s_i s_j) \
-  & = s_j ((upright(d)cal(L))/(upright(d)s_j) - underbrace(sum_i (upright(d)cal(L))/(upright(d)s_i) s_i, "点积"))
-$
-
-其中$delta_(i j) = 1 "if" i=j "else" 0$
-
-写成向量表示如下
-
-$
-  s dot.c ((upright(d)cal(L))/(upright(d)s) - ((upright(d)cal(L))/(upright(d)s) dot.c s))
-$
-
-ReLU的梯度
-
-$
-  mat(-2; 3; 8) arrow "ReLU"(x) arrow mat(0; 3; 8)
-$
-
-$
-  (d y)/(d x) = cases(1 "if" x > 0, 0)
-$
-
-LayerNorm的梯度
-
-- 数据：$(B, S, E)$
-- 沿着$E$进行归一化
-
-$
-  mu_(b,s) & = 1/E sum_(e=1)^E x_(b,s,e) \
-  "var"_(b,s) & = 1/E sum_(e=1)^E (x_(b,s,e) - mu_(b,s)) \
-  accent(x, tilde)_(b,s,e) & = (x_(b,s,e) - mu_(b,s))/sqrt("var"_(b,s)+epsilon) \
-  y_(b,s,e) & = underbrace(gamma_e, "learnable scale param") dot.c accent(x, tilde)_(b,s,e) + underbrace(beta_e, "learnable shift param")
-$
-
-给定上游的梯度$(d L)/(d y_(b,s,e))$，我们需要如下：
-
-$(d L)/(d gamma_e), (d L)/(d beta_e), (d L)/(d x_(b,s,e))$
-
-还记得我们的$B,S$索引都是独立的，所以梯度将会累积。为了简单，我们会忽略它们。
-
-$
-             mu & = 1/E sum_(k=1)^E x_k \
-           mu_k & eq.delta x_k - mu \
-        sigma^2 & = 1/E sum_(k=1)^E mu_k^2 \
-              s & = sqrt(sigma^2 + epsilon) \
-       hat(x)_j & = mu_j/s = (x_j - mu)/s space space space colred(s"和"mu"都有"x"里面") \
-            y_j & = gamma_j hat(x)_j + beta_j \
-        nabla_j & = (d L)/(d y_j) colred(arrow.l "上游的梯度") \
-  (d L)/(d x_i) & = sum_(j=1)^E (d L)/(d y_j) dot.c (d y_j)/(d x_i) \
-                & = sum_(j=1)^E nabla_j underbrace((d y_j)/(d hat(x)_j), gamma_j) dot.c (d hat(x)_j)/(d x_i) \
-                & = sum_(j=1)^E nabla_j dot.c gamma_j underbrace((d hat(x)_j)/(d x_i), "solve this")
-$
-
-$
-  mu = 1/E sum_(k=1)^E x_k arrow (d mu)/(d x_i) = 1/E
-$
-
-$
-  mu_j = x_j - mu arrow (d mu_j)/(d x_i) = delta_(i j) - 1/E space space space colred(mu_(i j) = 1 "if" i = j "else" 0)
-$
-
-$
-              sigma^2 & = 1/E sum_(k=1)^E mu_k^2 \
-  (d sigma^2)/(d x_i) & = 1/E sum_(k=1)^E 2 mu_k dot.c (d mu_k)/(d x_i) \
-                      & = 2/E sum_(k=1)^E mu_k (delta_(i k) - 1/E) \
-                      & = 2/E (sum_(k=1)^E mu_k underbrace(delta_(i k), 0 "if" i != k) - sum_(k=1)^E mu_k 1/E) \
-                      & = 2/E (mu_i - 1/E sum_(k=1)^E mu_k)
-$
-
-其中$1/E sum_(k=1)^E mu_k = 1/E sum_(k=1)^E x_k - mu = 0$
-
-$
-  therefore (d sigma^2)/(d x_i) = 2/E mu_i
-$
-
-$
-  s = sqrt(sigma^2 + epsilon) = (sigma^2 + epsilon)^(1/2)
-$
-
-$
-            (d s)/(d x_i) & = 1/2 (sigma^2 + epsilon)^(-1/2) dot.c (d(sigma^2 + epsilon))/(d x_i) colred(epsilon"是常数") \
-                          & = 1/(colred(cancel(2))sqrt(sigma^2+epsilon)) colred(cancel(2))/E mu_i \
-                          & = 1/s 1/E mu_i \
-  therefore (d s)/(d x_i) & = mu_i/(s E)
-$
-
-$
-  hat(x)_j = mu_j/s = mu_j 1/s
-$
-
-所以根据求导的乘法公式
-
-$
-  (d hat(x)_j)/(d x_i) = underbrace(mu_j dot.c (d (1/s))/(d x_i), "①") + underbrace((d mu_j)/(d x_i)1/s, "②")
-$
-
-①
-
-$
-  mu_j dot.c (d (1/s))/(d x_i) = mu_j (d s^(-1))/(d x_i) = -s^(-2) (d s)/(d x_i) mu_j \
-  = - 1/s^2 mu_j mu_i/(s E) = - (mu_i mu_j)/(s^3 E)
-$
-
-②
-
-$
-  (d mu_j)/(d x_i) 1/s & = (delta_(i j) - 1/E)(1/s) \
-  therefore (d hat(x)_j)/(d x_i) & = -(mu_i)/(s^3 E) + (delta_(i j) - 1/E)(1/s) \
-  & = 1/s (delta_(i j) - 1/E - (mu_i mu_j)/(s^2 E)) space space space colred(hat(x_i) = (mu_i)/(s)) \
-  & = 1/s (delta_(i j) - 1/E - (hat(x)_i hat(x)_j)/E)
-$
-
-我们还记得
-
-$
-  (d L)/(d x_i) & = sum_(j=1)^E nabla_j gamma_j (d hat(x)_j)/(d x_i) \
-  & = sum_(j=1)^E nabla_j gamma_j 1/s [delta_(i j) - 1/E - (hat(x)_i hat(x)_j)/E] \
-  & = 1/s [sum_(j=1) nabla_j gamma_j delta_(i j)
-    - 1/E sum_(j=1)^E nabla_j gamma_j
-    - 1/E sum_(j=1)^E nabla_j gamma_j hat(x)_i hat(x)_j] \
-  & = 1/s [nabla_i gamma_i - 1/E sum_(j=1)^E nabla_j gamma_j - hat(x)_i/E sum_(j=1)^E nabla_j gamma_j hat(x)_j]
-$
-
-我们还记得
-
-$
-  nabla = (d L)/(d y) "and" (d y)/(d hat(x)) = gamma
-$
-
-所以为了简单，我们上游的针对$hat(x)$的梯度（不仅是$y$）是：
-
-$
-  (d L)/(d y) dot.c (d y)/(d hat(x)) = nabla gamma eq.delta accent(nabla, tilde)
-$
-
-$
-  & = 1/s [accent(nabla, tilde) - 1/E sum_(j=1)^E accent(nabla, tilde) - hat(x)_i/E sum_(j=1)^E accent(nabla, tilde) hat(x)_j] colred("点积") \
-  & = 1/sqrt(sigma^2 + epsilon) [accent(nabla, tilde) - "mean"(accent(nabla, tilde)) - hat(x) dot.c "mean"(accent(nabla, tilde) dot.c hat(x))]
-$
-
-所以最终有
-
-$
-   (d L)/(d beta_j) & = sum_(B,S) (d L)/(d y) dot.c (d y)/(d beta_j) = sum_(B,S) nabla \
-  (d L)/(d gamma_j) & = sum_(B,S) (d L)/(d y) dot.c (d y)/(d gamma_j) = sum_(B,S) nabla hat(x)_j
-$
-
-Multihead Attention的梯度
-
-#show: appendices.with("Appendices", hide-parent: false)
