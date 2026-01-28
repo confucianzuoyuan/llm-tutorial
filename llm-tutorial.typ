@@ -1643,7 +1643,20 @@ $
 
 代码实现如下：
 
+```python
+def forward(x):
+    v = x + 1
+    y = v * v
+    return x, v, y
 
+def backward(x, v, y):
+    return 2 * v
+
+x = 2
+x, v, y = forward(x)
+grad = backward(x, v, y)
+print(grad)
+```
 
 
 == 概率论
