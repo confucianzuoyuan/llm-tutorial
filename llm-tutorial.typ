@@ -1627,35 +1627,81 @@ $
 1. 前向过程
 
 $
-  v & = x + 1 = 3 \
-  y & = v^2 = 3^2 = 9 \
+  u & = x + 1 = 3 \
+  v & = u^2 = 3^2 = 9 \
+  y & = v
 $
 
-上面的$v$是中间计算结果。
+上面的$u, v$是中间计算结果。
 
 2. 反向过程
 
 $
-  (upright(d)y)/(upright(d)x) & = (upright(d)y)/(upright(d)y) (upright(d)y)/(upright(d)v) (upright(d)v)/(upright(d)x) \
-                              & = 1 dot.c 2v dot.c 1 space space space colblue("（v在前向过程中保存了）") \
+  (upright(d)y)/(upright(d)x) & = (upright(d)y)/(upright(d)v) (upright(d)v)/(upright(d)u) (upright(d)u)/(upright(d)x) \
+                              & = 1 dot.c 2u dot.c 1 space space space colblue("（v在前向过程中保存了）") \
                               & = 2 times 3 = 6
 $
+
+正向过程和反向过程的*计算图*（computational graph）如下所示：
+
+#figure(
+  image("figures/计算图-1.svg"),
+  caption: [计算图],
+)
+
+可以看到，计算图中的反向过程的偏导数相乘就得到了$x$的偏导数。
 
 代码实现如下：
 
 ```python
 def forward(x):
-    v = x + 1
-    y = v * v
-    return x, v, y
+    u = x + 1
+    v = u * u
+    return x, u, v
 
-def backward(x, v, y):
-    return 2 * v
+def backward(x, u, v):
+    return 2 * u
 
 x = 2
-x, v, y = forward(x)
-grad = backward(x, v, y)
+x, u, v = forward(x)
+grad = backward(x, u, v)
 print(grad)
+```
+
+再来看一个例子，我们要求$y = (x_0 + x_1)(x_1 + 1)$在$(x_0=2,x_1=1)$点的梯度。
+
+还是可以绘制计算图如下：
+
+#figure(
+  image("figures/计算图-2.svg"),
+  caption: [计算图],
+)
+
+对应到链式求导公式和全微分公式
+
+$
+  (partial y)/(partial x_0) & = (partial y)/(partial c) dot.c (partial c)/(partial a) dot.c (partial a)/(partial x_0) \
+  (partial y)/(partial x_1) & = (partial y)/(partial c) dot.c (partial c)/(partial a) dot.c (partial a)/(partial x_1) + (partial y)/(partial c) dot.c (partial c)/(partial b) dot.c (partial b)/(partial x_1)
+$
+
+写成代码如下：
+
+```python
+def forward(x0, x1):
+    a = x0 + x1
+    b = x1 + 1
+    c = a * b
+    return a, b, c
+
+def backward(a, b, c):
+    x0_grad = b
+    x1_grad = b + a
+    return x0_grad, x1_grad
+
+x0, x1 = 2, 1
+a, b, c = forward(x0, x1)
+x0_grad, x1_grad = backward(a, b, c)
+print(x0_grad, x1_grad)
 ```
 
 
