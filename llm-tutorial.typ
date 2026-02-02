@@ -5009,22 +5009,965 @@ GPT-3 等架构的规模远超原始 Transformer 模型。例如，原始的 Tra
 - 当一个大语言模型完成预训练后，该模型便能作为基础模型，通过高效的微调来适应各类下游任务。
 - 在自定义数据集上进行微调的大语言模型能够在特定任务上超越通用的大语言模型。
 
+#chapter("大语言模型的架构", image: image("./orange2.jpg"), l: "llm-model-arch")
+
+大语言模型要解决的问题是根据上文（prompt，提示词）来"预测下一个token"（next token prediction，ntp）。
+
+例如，如果prompt是"君不见黄河"，那么大语言模型的工作流程如下：
+
+$
+        "君不见黄河" & arrow "LLM" arrow "之" \
+      "君不见黄河之" & arrow "LLM" arrow "水" \
+    "君不见黄河之水" & arrow "LLM" arrow "天" \
+  "君不见黄河之水天" & arrow "LLM" arrow "上" \
+                     & dots.v
+$
+
+而大语言模型如何进行训练呢？
+
+首先我们需要有训练数据，也就是输入输出对。而大语言模型的预训练无需人工标注，可以直接由文本数据生成，所以有时也叫做"自监督学习"。
+
+例如如果我们有一条文本数据"君不见黄河之水天上来"，那么训练数据如下：
+
+#figure(
+  table(
+    columns: 2,
+    align: right,
+    [*输入*], [*预测目标*],
+    [君], [不],
+    [君不], [见],
+    [君不见], [黄],
+    [君不见黄], [河],
+    [君不见黄河], [之],
+    [君不见黄河之水], [天],
+    [君不见黄河之水天], [上],
+    [君不见黄河之水天上], [来],
+  ),
+  caption: [训练数据：输入-预测目标对],
+)
+
+我们现在知道了大语言模型要解决的问题是什么（预测下一个token），以及对应的训练数据长什么样子，那么我们接下来就需要设计一个模型结构，然后使用训练数据训练这个模型结构，训练出来之后应该能够很好的完成预测下一个token的任务。
+
+这个模型结构经过多年的研究，目前收敛到的架构是：Decoder-Only Transformer（纯解码器的Transformer架构）。
+
+#figure(
+  image("figures/大模型架构.svg"),
+  caption: [GPT-2和Qwen3的架构图],
+)
+
 #chapter("处理文本数据", image: image("./orange2.jpg"), l: "llm-process-text-data")
 
-== 理解词嵌入
+文本数据的处理分两步：
 
-== 文本分词
+1. 将文本分词转换成整数（`input_ids`）
+2. 将每个`input_id`对应一个数值向量（token嵌入，word embeddings）
 
-== 将词元转换成词元ID
+== 对文本分词
 
-== 引入特殊上下文词元
+这里我们实现一个BPE（Byte Pair Encoding）字节对编码分词器。
 
-== BPE
+=== BPE背后的核心理念
 
-== 使用滑动窗口进行数据采样
+BPE的核心思想是将文本转换为整数表示（token ID），以便用于LLM训练。
 
-== 创建词元嵌入
+#figure(
+  image("figures/分词器.svg"),
+  caption: [分词器],
+)
 
-== 编码单词位置信息
+==== 位和字节（Bits and Bytes）
 
-== 小结
+考虑将文本转换为字节数组（毕竟BPE代表"字节"对编码）：
+
+```python
+text = "This is some text"
+byte_ary = bytearray(text, "utf-8")
+print(byte_ary)
+# 输出：bytearray(b'This is some text')
+```
+
+当我们对`bytearray`对象调用`list()`时，会将每个字节视为独立元素，结果将是一个与字节值相对应的整数列表：
+
+```python
+ids = list(byte_ary)
+print(ids)
+# 输出：[84, 104, 105, 115, 32, 105, 115, 32, 115, 111, 109, 101, 32, 116, 101, 120, 116]
+```
+
+这是一种将文本转换为token ID表示形式的有效方法，这是LLM嵌入层所需要的。
+
+但这种方法的一个缺点是，它为每个字符创建一个ID（对于一段简短文本来说，需要创建大量ID！）
+
+也就是说，这意味着对于17个字符的输入文本，我们必须使用17个token ID作为LLM的输入：
+
+```python
+print("Number of characters:", len(text))
+# 输出：Number of characters: 17
+print("Number of token IDs:", len(ids))
+# 输出：Number of token IDs: 17
+```
+
+BPE分词器使用的是词汇表机制——其工作原理并非为每个字符分配一个token ID，而是针对完整的单词或子词来建立这种映射关系。
+
+例如，GPT-2分词器会将相同的文本（"This is some text"）分词为4个token，而非17个：`1212, 318, 617, 2420`。
+
+#figure(
+  image("figures/tiktoken分词器在线网站.png"),
+  caption: [tiktoken分词器],
+)
+
+程序如下
+
+```python
+import tiktoken
+
+gpt2_tokenizer = tiktoken.get_encoding("gpt2")
+gpt2_tokenizer.encode("This is some text")
+# prints [1212, 318, 617, 2420]
+```
+
+一个字节由8位组成，因此单个字节能够表示从0到255的256个可能取值。
+
+一个BPE分词器通常将这256个值作为其最初的256个单字符token；你可以通过运行以下代码来直观地检查：
+
+```python
+import tiktoken
+gpt2_tokenizer = tiktoken.get_encoding("gpt2")
+
+for i in range(300):
+    decoded = gpt2_tokenizer.decode([i])
+    print(f"{i}: {decoded}")
+"""
+prints:
+0: !
+1: "
+2: #
+...
+255: �  # <---- single character tokens up to here
+256:  t
+257:  a
+...
+298: ent
+299:  n
+"""
+```
+
+请注意，256和257并非单字符值，而是双字符值（一个空格加一个字母），这是原始GPT-2 BPE分词器的一个小缺陷（该问题已在GPT-4分词器中得到改进）。
+
+==== 构建词汇表
+
+BPE分词算法的目标是构建一个常见子词的词汇表，例如像`298: ent`这样的子词（可以在entangle、entertain、enter、entrance、entity等词中找到），甚至包括像
+
+```
+318: is
+617: some
+1212: This
+2420: text
+```
+
+BPE算法最初在1994年由菲利普·盖奇（Philip Gage）所著的《一种新的数据压缩算法》（A New Algorithm for Data Compression）中描述。
+
+==== BPE算法概述
+
+1. 识别常见配对
+
+在每一次迭代中，扫描文本以找出最频繁出现的字节（或字符）对。
+
+2. 替换并记录
+
+将字节对替换为一个新的占位符ID（使用尚未被占用的数字，例如：若起始编号范围为0至255，则首个新占位符应为256）。
+
+将此映射关系记录在查找表中。
+
+查找表的大小是一个超参数，亦称为"词汇表大小"（对于 GPT-2 模型，该值为 50,257）。
+
+3. 重复直到无法进一步压缩
+
+持续重复步骤1和步骤2，不断地合并出现频率最高的配对
+
+当无法进一步压缩时（例如，没有配对出现超过一次）即停止
+
+*解码*
+
+为了恢复原始文本，需反转此过程，使用查找表将每个ID替换为其对应的配对
+
+==== BPE算法举例
+
+*编码部分的具体示例（对应步骤1和2）*
+
+假设我们有一段文本（训练数据集）`the cat in the hat`，希望基于此构建一个BPE分词器的词表
+
+- 第1轮迭代
+
+1. 识别高频对
+
+在这段文字中，"th"出现了两次（分别位于开头和第二个"e"之前）
+
+2. 进行替换并记录
+
+将"th"替换为尚未使用的新token ID，例如256
+
+新文本为：`<256>e cat in <256>e hat`
+
+新词汇表为
+
+```
+0: ...
+...
+256: "th"
+```
+
+- 第2轮迭代
+
+1. 识别高频对
+
+在文本`<256>e cat in <256>e hat`中，组合`<256>e`出现了两次
+
+2. 进行替换并记录
+
+使用未在使用的、新的token ID（如257）替换`<256>e`。
+
+新文本是：`<257> cat in <257> hat`
+
+更新后的词汇表是：
+
+```
+0: ...
+...
+256: "th"
+257: "<256>e"
+```
+
+- 第3轮迭代
+
+1. 识别高频对
+
+在文本`<257> cat in <257> hat`中，词语对`<257> `（注意这里有空格）出现了两次（一次在开头，一次在"hat"之前）。
+
+2. 进行替换并记录
+
+使用未在使用的、新的token ID（如258）替换`<257> `。
+
+新文本为：`<258>cat in <258>hat`
+
+更新后的词汇表是：
+
+```
+0: ...
+...
+256: "th"
+257: "<256>e"
+258: "<257> "
+```
+
+- 继续迭代
+
+*解码部分具体例子*
+
+要恢复原始文本，我们通过按引入顺序的逆序将每个token ID替换为其对应的字符对来反转这一过程
+
+从最终的压缩文本开始：`<258>cat in <258>hat`
+
+将`<258>`替换为`<257> `：`<257> cat in <257> hat`
+
+将`<257>`替换为`<256>e`：`<256>e cat in <256>e hat`
+
+将`<256>`替换为"th"：`the cat in the hat`
+
+=== 一个简单的 BPE 实现
+
+1. 将输入文本分割为单独的字节
+2. 反复查找并替换（合并）相邻的token（对），当它们匹配到学习到的 BPE 合并中的任何一对时（按照从高到低的"等级"，即它们被学习的顺序进行）。
+3. 继续合并操作直至无法再进行任何合并
+4. 最终的token ID列表即为编码输出
+
+代码如下：
+
+```python
+from collections import Counter, deque
+from functools import lru_cache
+import re
+import json
+
+
+class BPETokenizerSimple:
+    def __init__(self):
+        # 词汇表：{token_id: token_str} (e.g., {11246: "some"})
+        self.vocab = {}
+        # 反向词汇表：{token_str: token_id} (e.g., {"some": 11246})
+        self.inverse_vocab = {}
+        # BPE的合并字典: {(token_id1, token_id2): merged_token_id}
+        self.bpe_merges = {}
+
+        # OpenAI官方的GPT-2合并字典使用了一个排序字典
+        # 格式为：{(string_A, string_B): rank}，rank越小，优先级越高
+        self.bpe_ranks = {}
+
+    def train(self, text, vocab_size, allowed_special={"<|endoftext|>"}):
+        """
+        从头训练BPE分词器
+
+        Args:
+            text (str): 训练文本
+            vocab_size (int): 词汇表大小
+            allowed_special (set): 特殊token集合
+        """
+
+        # 预处理: 将空格替换为"Ġ"
+        # 注意！Ġ仅在GPT-2 BPE实现中使用
+        # E.g., "Hello world" 会被分词为 ["Hello", "Ġworld"]
+        # (GPT-4 BPE 会分词为 ["Hello", " world"])
+        processed_text = []
+        for i, char in enumerate(text):
+            if char == " " and i != 0:
+                processed_text.append("Ġ")
+            if char != " ":
+                processed_text.append(char)
+        processed_text = "".join(processed_text)
+
+        # 使用单个字符初始化词汇表，包括"Ġ"（如果文本有空格的话）
+        # 词汇表从256个ascii字符开始
+        unique_chars = [chr(i) for i in range(256)]
+        unique_chars.extend(
+            char for char in sorted(set(processed_text))
+            if char not in unique_chars
+        )
+        if "Ġ" not in unique_chars:
+            unique_chars.append("Ġ")
+
+        self.vocab = {i: char for i, char in enumerate(unique_chars)}
+        self.inverse_vocab = {char: i for i, char in self.vocab.items()}
+
+        # 添加特殊token
+        if allowed_special:
+            for token in allowed_special:
+                if token not in self.inverse_vocab:
+                    new_id = len(self.vocab)
+                    self.vocab[new_id] = token
+                    self.inverse_vocab[token] = new_id
+
+        # 将处理后的文本分词为token IDs
+        token_ids = [self.inverse_vocab[char] for char in processed_text]
+
+        # BPE 1-3 步: 重复的发现和替换高频对
+        for new_id in range(len(self.vocab), vocab_size):
+            pair_id = self.find_freq_pair(token_ids, mode="most")
+            if pair_id is None:
+                break
+            token_ids = self.replace_pair(token_ids, pair_id, new_id)
+            self.bpe_merges[pair_id] = new_id
+
+        # 使用合并后的token构建词汇表
+        for (p0, p1), new_id in self.bpe_merges.items():
+            merged_token = self.vocab[p0] + self.vocab[p1]
+            self.vocab[new_id] = merged_token
+            self.inverse_vocab[merged_token] = new_id
+
+    def load_vocab_and_merges_from_openai(self, vocab_path, bpe_merges_path):
+        """
+        加载预训练的词汇表和OpenAI GPT-2的BPE合并文件
+
+        Args:
+            vocab_path (str): 词汇表文件路径(GPT-2叫做'encoder.json').
+            bpe_merges_path (str): bpe_merges文件路径(GPT-2叫做'vocab.bpe').
+        """
+        # 加载词汇表
+        with open(vocab_path, "r", encoding="utf-8") as file:
+            loaded_vocab = json.load(file)
+            # encoder.json字典格式为：{token_str: id}; 我们需要id->str和str->id
+            self.vocab = {int(v): k for k, v in loaded_vocab.items()}
+            self.inverse_vocab = {k: int(v) for k, v in loaded_vocab.items()}
+
+        # 必须包含 GPT-2的可打印换行字符 'Ċ' (U+010A) ，且 id 必须是 198
+        if "Ċ" not in self.inverse_vocab or self.inverse_vocab["Ċ"] != 198:
+            raise KeyError("Vocabulary missing GPT-2 newline glyph 'Ċ' at id 198.")
+
+        # 必须包含 <|endoftext|> 且 id 为 50256
+        if "<|endoftext|>" not in self.inverse_vocab or self.inverse_vocab["<|endoftext|>"] != 50256:
+            raise KeyError("Vocabulary missing <|endoftext|> at id 50256.")
+
+        # 为换行符 '\n' 起别名，id 为 198
+        # 将可打印字符'Ċ' 保存在词汇表中，这样BPE的合并机制才能起作用
+        if "\n" not in self.inverse_vocab:
+            self.inverse_vocab["\n"] = self.inverse_vocab["Ċ"]
+
+        if "\r" not in self.inverse_vocab:
+            if 201 in self.vocab:
+                self.inverse_vocab["\r"] = 201
+            else:
+                raise KeyError("Vocabulary missing carriage return token at id 201.")
+
+        # 加载GPT-2的合并然后存储优先级rank
+        self.bpe_ranks = {}
+        with open(bpe_merges_path, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            if lines and lines[0].startswith("#"):
+                lines = lines[1:]
+
+            rank = 0
+            for line in lines:
+                token1, *rest = line.strip().split()
+                if len(rest) != 1:
+                    continue
+                token2 = rest[0]
+                if token1 in self.inverse_vocab and token2 in self.inverse_vocab:
+                    self.bpe_ranks[(token1, token2)] = rank
+                    rank += 1
+                else:
+                    # 如果对的符号都不在词汇表中，则直接跳过
+                    pass
+
+
+    def encode(self, text, allowed_special=None):
+        """
+        将输入文本编码为token ID列表，使用tiktoken处理特殊token的风格
+
+        Args:
+            text (str): 输入文本
+            allowed_special (set or None): 是否允许特殊token。如果为None，则禁用特殊token处理机制
+
+        Returns:
+            token ID列表
+        """
+
+        # ---- 下面的代码模仿tiktoken处理特殊token的实现 ----
+        specials_in_vocab = [
+            tok for tok in self.inverse_vocab
+            if tok.startswith("<|") and tok.endswith("|>")
+        ]
+        if allowed_special is None:
+            # 如果文本中出现了特殊token，则抛出异常
+            disallowed = [tok for tok in specials_in_vocab if tok in text]
+            if disallowed:
+                raise ValueError(f"Disallowed special tokens encountered in text: {disallowed}")
+        else:
+            # 允许一些特殊token (e.g., 例如<|endoftext|>)
+            disallowed = [tok for tok in specials_in_vocab if tok in text and tok not in allowed_special]
+            if disallowed:
+                raise ValueError(f"Disallowed special tokens encountered in text: {disallowed}")
+        # -----------------------------------------------------------------------------
+
+        token_ids = []
+        # If some specials are allowed, split around them and passthrough those ids
+        if allowed_special is not None and len(allowed_special) > 0:
+            special_pattern = "(" + "|".join(
+                re.escape(tok) for tok in sorted(allowed_special, key=len, reverse=True)
+            ) + ")"
+
+            last_index = 0
+            for match in re.finditer(special_pattern, text):
+                prefix = text[last_index:match.start()]
+                token_ids.extend(self.encode(prefix, allowed_special=None))  # encode prefix normally
+
+                special_token = match.group(0)
+                if special_token in self.inverse_vocab:
+                    token_ids.append(self.inverse_vocab[special_token])
+                else:
+                    raise ValueError(f"Special token {special_token} not found in vocabulary.")
+                last_index = match.end()
+
+            text = text[last_index:]  # remainder to process normally
+
+            # Extra guard for any other special literals left over
+            disallowed = [
+                tok for tok in self.inverse_vocab
+                if tok.startswith("<|") and tok.endswith("|>") and tok in text and tok not in allowed_special
+            ]
+            if disallowed:
+                raise ValueError(f"Disallowed special tokens encountered in text: {disallowed}")
+
+
+        # ---- Newline and carriage return handling ----
+        tokens = []
+        parts = re.split(r'(\r\n|\r|\n)', text)
+        for part in parts:
+            if part == "":
+                continue
+            if part == "\r\n":
+                tokens.append("\r")
+                tokens.append("\n")
+                continue
+            if part == "\r":
+                tokens.append("\r")
+                continue
+            if part == "\n":
+                tokens.append("\n")
+                continue
+
+            # Normal chunk without line breaks:
+            # - If spaces precede a word, prefix the first word with 'Ġ' and
+            #   add standalone 'Ġ' for additional spaces
+            # - If spaces trail the chunk (e.g., before a newline) add
+            #   standalone 'Ġ' tokens (tiktoken produces id 220 for 'Ġ')
+            pending_spaces = 0
+            for m in re.finditer(r'( +)|(\S+)', part):
+                if m.group(1) is not None:
+                    pending_spaces += len(m.group(1))
+                else:
+                    word = m.group(2)
+                    if pending_spaces > 0:
+                        for _ in range(pending_spaces - 1):
+                            tokens.append("Ġ")  # remaining spaces as standalone
+                        tokens.append("Ġ" + word) # one leading space
+                        pending_spaces = 0
+                    else:
+                        tokens.append(word)
+            # Trailing spaces (no following word): add standalone 'Ġ' tokens
+            for _ in range(pending_spaces):
+                tokens.append("Ġ")
+        # ---------------------------------------------------------------
+
+        # Map tokens -> ids (BPE if needed)
+        for tok in tokens:
+            if tok in self.inverse_vocab:
+                token_ids.append(self.inverse_vocab[tok])
+            else:
+                token_ids.extend(self.tokenize_with_bpe(tok))
+
+        return token_ids
+
+    def tokenize_with_bpe(self, token):
+        """
+        Tokenize a single token using BPE merges.
+
+        Args:
+            token (str): The token to tokenize.
+
+        Returns:
+            List[int]: The list of token IDs after applying BPE.
+        """
+        # Tokenize the token into individual characters (as initial token IDs)
+        token_ids = [self.inverse_vocab.get(char, None) for char in token]
+        if None in token_ids:
+            missing_chars = [char for char, tid in zip(token, token_ids) if tid is None]
+            raise ValueError(f"Characters not found in vocab: {missing_chars}")
+
+        # If we haven't loaded OpenAI's GPT-2 merges, use my approach
+        if not self.bpe_ranks:
+            can_merge = True
+            while can_merge and len(token_ids) > 1:
+                can_merge = False
+                new_tokens = []
+                i = 0
+                while i < len(token_ids) - 1:
+                    pair = (token_ids[i], token_ids[i + 1])
+                    if pair in self.bpe_merges:
+                        merged_token_id = self.bpe_merges[pair]
+                        new_tokens.append(merged_token_id)
+                        # Uncomment for educational purposes:
+                        # print(f"Merged pair {pair} -> {merged_token_id} ('{self.vocab[merged_token_id]}')")
+                        i += 2  # Skip the next token as it's merged
+                        can_merge = True
+                    else:
+                        new_tokens.append(token_ids[i])
+                        i += 1
+                if i < len(token_ids):
+                    new_tokens.append(token_ids[i])
+                token_ids = new_tokens
+            return token_ids
+
+        # Otherwise, do GPT-2-style merging with the ranks:
+        # 1) Convert token_ids back to string "symbols" for each ID
+        symbols = [self.vocab[id_num] for id_num in token_ids]
+
+        # Repeatedly merge all occurrences of the lowest-rank pair
+        while True:
+            # Collect all adjacent pairs
+            pairs = set(zip(symbols, symbols[1:]))
+            if not pairs:
+                break
+
+            # Find the pair with the best (lowest) rank
+            min_rank = float("inf")
+            bigram = None
+            for p in pairs:
+                r = self.bpe_ranks.get(p, float("inf"))
+                if r < min_rank:
+                    min_rank = r
+                    bigram = p
+
+            # If no valid ranked pair is present, we're done
+            if bigram is None or bigram not in self.bpe_ranks:
+                break
+
+            # Merge all occurrences of that pair
+            first, second = bigram
+            new_symbols = []
+            i = 0
+            while i < len(symbols):
+                # If we see (first, second) at position i, merge them
+                if i < len(symbols) - 1 and symbols[i] == first and symbols[i+1] == second:
+                    new_symbols.append(first + second)  # merged symbol
+                    i += 2
+                else:
+                    new_symbols.append(symbols[i])
+                    i += 1
+            symbols = new_symbols
+
+            if len(symbols) == 1:
+                break
+
+        # Finally, convert merged symbols back to IDs
+        merged_ids = [self.inverse_vocab[sym] for sym in symbols]
+        return merged_ids
+
+    def decode(self, token_ids):
+        """
+        将token ID列表解码为文本字符串
+
+        Args:
+            token_ids (List[int]): The list of token IDs to decode.
+
+        Returns:
+            str: The decoded string.
+        """
+        out = []
+        for tid in token_ids:
+            if tid not in self.vocab:
+                raise ValueError(f"Token ID {tid} not found in vocab.")
+            tok = self.vocab[tid]
+
+            # Map GPT-2 special chars back to real chars
+            if tid == 198 or tok == "\n":
+                out.append("\n")
+            elif tid == 201 or tok == "\r":
+                out.append("\r")
+            elif tok.startswith("Ġ"):
+                out.append(" " + tok[1:])
+            else:
+                out.append(tok)
+        return "".join(out)
+
+    def save_vocab_and_merges(self, vocab_path, bpe_merges_path):
+        """
+        将词汇表和BPE合并保存到JSON文件中
+
+        Args:
+            vocab_path (str): Path to save the vocabulary.
+            bpe_merges_path (str): Path to save the BPE merges.
+        """
+        # Save vocabulary
+        with open(vocab_path, "w", encoding="utf-8") as file:
+            json.dump(self.vocab, file, ensure_ascii=False, indent=2)
+
+        # Save BPE merges as a list of dictionaries
+        with open(bpe_merges_path, "w", encoding="utf-8") as file:
+            merges_list = [{"pair": list(pair), "new_id": new_id}
+                           for pair, new_id in self.bpe_merges.items()]
+            json.dump(merges_list, file, ensure_ascii=False, indent=2)
+
+    def load_vocab_and_merges(self, vocab_path, bpe_merges_path):
+        """
+        Load the vocabulary and BPE merges from JSON files.
+
+        Args:
+            vocab_path (str): Path to the vocabulary file.
+            bpe_merges_path (str): Path to the BPE merges file.
+        """
+        # Load vocabulary
+        with open(vocab_path, "r", encoding="utf-8") as file:
+            loaded_vocab = json.load(file)
+            self.vocab = {int(k): v for k, v in loaded_vocab.items()}
+            self.inverse_vocab = {v: int(k) for k, v in loaded_vocab.items()}
+
+        # Load BPE merges
+        with open(bpe_merges_path, "r", encoding="utf-8") as file:
+            merges_list = json.load(file)
+            for merge in merges_list:
+                pair = tuple(merge["pair"])
+                new_id = merge["new_id"]
+                self.bpe_merges[pair] = new_id
+
+    @lru_cache(maxsize=None)
+    def get_special_token_id(self, token):
+        return self.inverse_vocab.get(token, None)
+
+    @staticmethod
+    def find_freq_pair(token_ids, mode="most"):
+        pairs = Counter(zip(token_ids, token_ids[1:]))
+
+        if not pairs:
+            return None
+
+        if mode == "most":
+            return max(pairs.items(), key=lambda x: x[1])[0]
+        elif mode == "least":
+            return min(pairs.items(), key=lambda x: x[1])[0]
+        else:
+            raise ValueError("Invalid mode. Choose 'most' or 'least'.")
+
+    @staticmethod
+    def replace_pair(token_ids, pair_id, new_id):
+        dq = deque(token_ids)
+        replaced = []
+
+        while dq:
+            current = dq.popleft()
+            if dq and (current, dq[0]) == pair_id:
+                replaced.append(new_id)
+                # Remove the 2nd token of the pair, 1st was already removed
+                dq.popleft()
+            else:
+                replaced.append(current)
+
+        return replaced
+```
+
+=== BPE实现逐步讲解
+
+==== 训练、编码与解码
+
+首先，让我们考虑一些样本文本作为训练数据集：
+
+```python
+text_path = "data.txt"
+
+with open(text_path, "r", encoding="utf-8") as f:
+    text = f.read()
+```
+
+接下来，让我们初始化和训练BPE分词器，设置词汇表大小为1000
+
+注意，由于先前讨论的字节值，词汇表大小默认已是256，因此我们只需"学习"744个词汇（若将`<|endoftext|>`特殊token和`Ġ`空白token计算在内；确切而言，实际为742个）
+
+作为对比，GPT-2的词汇表包含50,257个token，GPT-4的词汇表有100,256个token（tiktoken中的`cl100k_base`），而GPT-4o则使用`199,997`个token（tiktoken 中的 o200k_base ）；相比我们上述的简单示例文本，它们的训练集规模都要大得多
+
+```python
+tokenizer = BPETokenizerSimple()
+tokenizer.train(text, vocab_size=1000, allowed_special={"<|endoftext|>"})
+# print(tokenizer.vocab)
+print(len(tokenizer.vocab))
+```
+
+本词汇表通过合并742次（`= 1000 - len(range(0, 256)) - len(special_tokens) - "Ġ" = 1000 - 256 - 1 - 1 = 742`）创建而成
+
+```python
+print(len(tokenizer.bpe_merges))
+```
+
+这意味着前256个条目是单字符token
+
+接下来，我们使用通过encode方法创建的合并操作来编码一些文本：
+
+```python
+input_text = "Jack embraced beauty through art and life."
+token_ids = tokenizer.encode(input_text)
+print(token_ids)
+
+input_text = "Jack embraced beauty through art and life.<|endoftext|> "
+token_ids = tokenizer.encode(input_text, allowed_special={"<|endoftext|>"})
+print(token_ids)
+
+print("Number of characters:", len(input_text))
+print("Number of token IDs:", len(token_ids))
+
+print(tokenizer.decode(token_ids))
+```
+
+从上述长度可以看出，一个包含42个字符的句子被编码成了20个token ID，与基于逐字符字节的编码方式相比，有效缩短了输入长度约一半
+
+请注意，词汇表本身在`decode()`方法中被使用，这使得我们能够将token ID映射回文本。
+
+迭代每个token ID可以让我们更好地理解这些token ID是如何通过词汇表解码的：
+
+```python
+for token_id in token_ids:
+    print(f"{token_id} -> {tokenizer.decode([token_id])}")
+```
+
+输出
+
+```python
+424 -> Jack
+256 ->
+654 -> em
+531 -> br
+302 -> ac
+311 -> ed
+256 ->
+296 -> be
+97 -> a
+465 -> ut
+121 -> y
+595 ->  through
+841 ->  ar
+116 -> t
+287 ->  a
+466 -> nd
+256 ->
+326 -> li
+972 -> fe
+46 -> .
+257 -> <|endoftext|>
+256 ->
+```
+
+由此可见，大多数token ID都代表2字符的子词；这是因为训练数据的文本非常简短，没有那么多重复的单词，同时因为我们使用了相对较小的词汇量
+
+总而言之，调用`decode(encode())`应能还原任意输入文本：
+
+```python
+tokenizer.decode(
+    tokenizer.encode("This is some text.")
+)
+tokenizer.decode(
+    tokenizer.encode("This is some text with \n newline characters.")
+)
+```
+
+==== 保存和加载分词器
+
+接下来，让我们看看如何保存训练好的分词器，以便后续重复使用：
+
+```python
+# Save trained tokenizer
+tokenizer.save_vocab_and_merges(vocab_path="vocab.json", bpe_merges_path="bpe_merges.txt")
+# Load tokenizer
+tokenizer2 = BPETokenizerSimple()
+tokenizer2.load_vocab_and_merges(vocab_path="vocab.json", bpe_merges_path="bpe_merges.txt")
+```
+
+加载的分词器应能产生与之前相同的结果：
+
+```python
+print(tokenizer2.decode(token_ids))
+tokenizer2.decode(
+    tokenizer2.encode("This is some text with \n newline characters.")
+)
+```
+
+==== 从OpenAI加载原始的GPT-2 BPE分词器
+
+```python
+files_to_download = {
+    "https://openaipublic.blob.core.windows.net/gpt-2/models/124M/vocab.bpe": "vocab.bpe",
+    "https://openaipublic.blob.core.windows.net/gpt-2/models/124M/encoder.json": "encoder.json"
+}
+
+tokenizer_gpt2 = BPETokenizerSimple()
+tokenizer_gpt2.load_vocab_and_merges_from_openai(
+    vocab_path="encoder.json", bpe_merges_path="vocab.bpe"
+)
+
+print(len(tokenizer_gpt2.vocab))
+```
+
+词汇表大小应为50257。
+
+我们现在可以通过BPETokenizerSimple对象使用GPT-2分词器。
+
+```python
+input_text = "This is some text"
+token_ids = tokenizer_gpt2.encode(input_text)
+print(token_ids)
+print(tokenizer_gpt2.decode(token_ids))
+```
+
+使用官方的tiktoken库验证一下
+
+```python
+import tiktoken
+
+gpt2_tokenizer = tiktoken.get_encoding("gpt2")
+gpt2_tokenizer.encode("This is some text")
+# prints [1212, 318, 617, 2420]
+```
+
+== 创建词嵌入查找表
+
+在PyTorch中，嵌入层实现的功能与执行矩阵乘法的线性层相同；我们使用嵌入层主要是出于计算效率的考虑。
+
+```python
+# 假设我们有以下3个训练样本，
+# 它们可能代表LLM上下文中的token ID
+idx = torch.tensor([2, 3, 1])
+
+# 嵌入矩阵的行数可以通过
+# 获取最大的token ID + 1来确定。
+# 如果最大的token ID是3，那么我们需要4行，用于可能的
+# token ID：0, 1, 2, 3
+num_idx = max(idx)+1
+
+# 期望的嵌入维度是一个超参数
+out_dim = 5
+```
+
+让我们实现一个简单的嵌入层：
+
+```python
+torch.manual_seed(123)
+embedding = torch.nn.Embedding(num_idx, out_dim)
+print(embedding.weight) # 查看嵌入权重
+# 获取训练示例ID为1的向量表示
+print(embedding(torch.tensor([1])))
+# 获取训练示例ID为2的向量表示
+print(embedding(torch.tensor([2])))
+# 查找一批ID的向量表示
+idx = torch.tensor([2, 3, 1])
+print(embedding(idx))
+```
+
+#figure(
+  image("figures/词嵌入-1.png"),
+  caption: [训练示例ID为1的向量表示],
+)
+
+#figure(
+  image("figures/词嵌入-2.png"),
+  caption: [训练示例ID为2的向量表示],
+)
+
+#figure(
+  image("figures/词嵌入-3.png"),
+  caption: [查找一批ID的向量表示],
+)
+
+现在我们用独热编码和`nn.Linear`实现和上面的嵌入层一样的功能。
+
+首先将token ID转换为独热编码
+
+```python
+onehot = torch.nn.functional.one_hot(idx)
+print(onehot)
+```
+
+接下来，我们初始化一个Linear层，它会执行一个矩阵乘法$X W^T$
+
+```python
+torch.manual_seed(123)
+linear = torch.nn.Linear(num_idx, out_dim, bias=False)
+print(linear.weight)
+```
+
+请注意，PyTorch中的线性层同样是用小的随机权重初始化的；为了与上面的Embedding层直接比较，我们必须使用相同的小随机权重，这就是我们在此处重新赋值它们的原因：
+
+```python
+linear.weight = torch.nn.Parameter(embedding.weight.T)
+```
+
+现在我们可以将线性层应用于输入数据的独热编码表示
+
+```python
+print(linear(onehot.float()))
+print(embedding(idx))
+```
+
+正如我们所见，这与使用嵌入层时得到的结果完全相同。
+
+底层执行的是对第一个训练示例的token ID进行的如下计算：
+
+#figure(
+  image("figures/词嵌入-4.png"),
+  caption: [对第一个训练示例的底层计算过程],
+)
+
+第二个训练样本对应的 token ID 是：
+
+#figure(
+  image("figures/词嵌入-5.png"),
+  caption: [对第二个训练示例的底层计算过程],
+)
+
+由于每行独热编码中除一个索引外全为 0（这是设计的必然结果），该矩阵乘法实质上等同于对独热元素的查表操作。
+
+这种在独热编码上使用矩阵乘法的做法等价于嵌入层查找操作，但当处理大型嵌入矩阵时会效率低下，因为存在大量与零相乘的无效计算。
