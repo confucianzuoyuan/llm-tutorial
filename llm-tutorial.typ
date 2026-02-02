@@ -5875,6 +5875,8 @@ gpt2_tokenizer.encode("This is some text")
 
 == 创建词嵌入查找表
 
+=== 词嵌入深入讨论
+
 在PyTorch中，嵌入层实现的功能与执行矩阵乘法的线性层相同；我们使用嵌入层主要是出于计算效率的考虑。
 
 ```python
@@ -5971,3 +5973,121 @@ print(embedding(idx))
 由于每行独热编码中除一个索引外全为 0（这是设计的必然结果），该矩阵乘法实质上等同于对独热元素的查表操作。
 
 这种在独热编码上使用矩阵乘法的做法等价于嵌入层查找操作，但当处理大型嵌入矩阵时会效率低下，因为存在大量与零相乘的无效计算。
+
+=== 词嵌入的反向传播
+
+1. 问题设定
+
+参数设置
+
+- 词汇表大小 (vocab_size)：2
+- 嵌入维度 (embedding_dim)：2
+- 输入序列 (input_ids)：[0, 1, 0]
+- 序列长度：3
+
+嵌入矩阵
+
+$
+  W in RR^(2 times 2) = mat(w_00, w_01; w_10, w_11)
+$
+
+
+其中：
+
+- 第 0 行：token ID = 0 的嵌入向量
+- 第 1 行：token ID = 1 的嵌入向量
+
+2. 将token id列表转换成独热编码
+
+$
+  "OneHot"([0, 1, 0]) = mat(1, 0; 0, 1; 1, 0) in RR^(3 times 2)
+$
+
+3. 前向传播
+
+$
+  E & = "OneHot" dot.c W \
+    & = mat(e_00, e_01; e_10, e_11; e_20, e_21) \
+    & = mat(1, 0; 0, 1; 1, 0) mat(w_00, w_01; w_10, w_11) & = mat(w_00, w_01; w_10, w_11; w_00, w_01)
+$
+
+4. 反向传播（求导）
+
+从标量函数$cal(L)$开始推导，得到
+
+$
+  (partial cal(L))/(partial W) & = "OneHot"^T dot.c (partial cal(L))/(partial E) \
+  & = mat(1, 0, 1; 0, 1, 0)mat((partial cal(L))/(partial e_00), (partial cal(L))/(partial e_01); (partial cal(L))/(partial e_10), (partial cal(L))/(partial e_11); (partial cal(L))/(partial e_20), (partial cal(L))/(partial e_21)) \
+  & = mat((partial cal(L))/(partial e_00) + (partial cal(L))/(partial e_20), (partial cal(L))/(partial e_01) + (partial cal(L))/(partial e_21); (partial cal(L))/(partial e_10), (partial cal(L))/(partial e_11))
+$
+
+有两个发现
+
+- Token ID = 0 出现了 2 次（位置 0 和位置 2）
+  - 第 0 行梯度 = 两个位置的梯度之和
+- Token ID = 1 出现了 1 次（位置 1）
+  - 第 1 行梯度 = 该位置的梯度
+
+即：某个 token 的嵌入向量的梯度 = 所有使用该 token 位置的梯度之和。
+
+```python
+import torch
+import torch.nn as nn
+
+# 设置随机种子以便复现
+torch.manual_seed(42)
+
+# 定义参数
+vocab_size = 2
+embedding_dim = 2
+input_ids = torch.tensor([0, 1, 0])
+
+# 创建嵌入层
+embedding = nn.Embedding(vocab_size, embedding_dim)
+
+# 查看初始权重
+print("初始嵌入矩阵 W:")
+print(embedding.weight)
+print()
+
+# 前向传播
+output = embedding(input_ids)
+print("嵌入输出 E:")
+print(output)
+print()
+
+# 假设一个简单的损失：所有元素的平方和
+loss = (output ** 2).sum()
+print(f"损失 L = {loss.item():.4f}")
+print()
+
+# 反向传播
+loss.backward()
+
+# 查看梯度
+print("嵌入矩阵的梯度 ∂L/∂W:")
+print(embedding.weight.grad)
+print()
+
+# 手动计算验证
+print("=== 手动验证 ===")
+# ∂L/∂E = 2 * E（因为 L = sum(E²)）
+grad_E = 2 * output
+print("∂L/∂E (梯度矩阵 G):")
+print(grad_E)
+print()
+
+# 手动计算 ∂L/∂W
+grad_W_manual = torch.zeros(vocab_size, embedding_dim)
+for i, idx in enumerate(input_ids):
+    grad_W_manual[idx] += grad_E[i]
+
+print("手动计算的 ∂L/∂W:")
+print(grad_W_manual)
+print()
+
+# 验证是否一致
+print("PyTorch 梯度与手动计算是否一致:")
+print(torch.allclose(embedding.weight.grad, grad_W_manual))
+```
+
