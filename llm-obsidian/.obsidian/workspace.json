@@ -18,8 +18,45 @@
               "icon": "excalidraw-icon",
               "title": "GPT-2"
             }
+          },
+          {
+            "id": "b7b0edacc896b890",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "Excalidraw/GPT-2.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "GPT-2"
+            }
+          },
+          {
+            "id": "fba6d3beed500dca",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "Excalidraw/GPT-2.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "GPT-2"
+            }
+          },
+          {
+            "id": "7133c8e23873af52",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "Excalidraw/GPT-2.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "GPT-2"
+            }
           }
-        ]
+        ],
+        "currentTab": 3
       }
     ],
     "direction": "vertical"
@@ -182,15 +219,19 @@
       "obsidian-excalidraw-plugin:新建绘图文件": false
     }
   },
-  "active": "291ed524f0998f49",
+  "active": "7133c8e23873af52",
   "lastOpenFiles": [
+    "GPT-2.pdf",
+    "LayerNorm求导.md",
+    "Excalidraw/GPT-2.md",
+    "GPT-2.excalidraw.pdf",
+    "torch.einsum.md",
+    "dropout求导.md",
     "Pasted Image 20260203183822_142.png",
     "Pasted Image 20260203183822_120.png",
     "Pasted Image 20260203183237_781.png",
     "Pasted Image 20260203183213_513.png",
     "Pasted Image 20260203183148_533.png",
-    "GPT-2.excalidraw.pdf",
-    "Excalidraw/GPT-2.md",
     "Pasted Image 20260203152805_426.png",
     "欢迎.md",
     "Excalidraw"
