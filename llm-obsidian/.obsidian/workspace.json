@@ -15,8 +15,8 @@
               "state": {
                 "file": "Excalidraw/GPT-2.md"
               },
-              "icon": "excalidraw-icon",
-              "title": "GPT-2"
+              "icon": "lucide-ghost",
+              "title": "excalidraw"
             }
           },
           {
@@ -27,8 +27,8 @@
               "state": {
                 "file": "Excalidraw/GPT-2.md"
               },
-              "icon": "excalidraw-icon",
-              "title": "GPT-2"
+              "icon": "lucide-ghost",
+              "title": "excalidraw"
             }
           },
           {
@@ -39,8 +39,8 @@
               "state": {
                 "file": "Excalidraw/GPT-2.md"
               },
-              "icon": "excalidraw-icon",
-              "title": "GPT-2"
+              "icon": "lucide-ghost",
+              "title": "excalidraw"
             }
           },
           {
@@ -113,7 +113,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "0fcf68d297efa536",
@@ -221,9 +222,9 @@
   },
   "active": "7133c8e23873af52",
   "lastOpenFiles": [
+    "Excalidraw/GPT-2.md",
     "GPT-2.pdf",
     "LayerNorm求导.md",
-    "Excalidraw/GPT-2.md",
     "GPT-2.excalidraw.pdf",
     "torch.einsum.md",
     "dropout求导.md",
